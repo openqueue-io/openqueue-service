@@ -1,2 +1,2 @@
 # openqueue-service
-Backend services handle requests from REST api. 
+基于SpringBoot开发的OpenQueue的后端服务。Backend services handle requests from REST api. 
