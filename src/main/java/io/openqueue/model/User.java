@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
-
 /**
  * @author chenjing
  */
@@ -14,10 +12,9 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Ticket {
+public class User {
     private String id;
-    private String queueId;
-    private Instant issueTime;
-    private int position;
-    private int countOfIpAllowed;
+    private String userName;
+    private String password;
+    private String phoneNumber;
 }

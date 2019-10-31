@@ -21,4 +21,5 @@ public class Queue {
     private int tail;
     private int maxActiveUsers;
     private int availableMinutePerUser;
+    private String callbackWebSite;
 }

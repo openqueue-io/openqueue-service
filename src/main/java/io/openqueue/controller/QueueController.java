@@ -18,21 +18,21 @@ public class QueueController {
 
     @PostMapping()
     public ResponseEntity<Object> createQueue(@RequestBody String queueId){
-        return new ResponseEntity<>("createQueue:", HttpStatus.OK);
-    }
-
-    @DeleteMapping(value = "/{queueId}")
-    public ResponseEntity<Object> deleteQueue(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("createQueue:", HttpStatus.OK);
-    }
-
-    @PutMapping()
-    public ResponseEntity<Object> updateQueue(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("getQueueInfoById:" + queueId , HttpStatus.OK);
+        return new ResponseEntity<>("createQueue", HttpStatus.OK);
     }
 
     @GetMapping(value = "/{queueId}")
     public ResponseEntity<Object> getQueueInfo(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("getQueueInfoById:" + queueId , HttpStatus.OK);
+        return new ResponseEntity<>("getQueueInfoById" + queueId , HttpStatus.OK);
+    }
+
+    @PutMapping()
+    public ResponseEntity<Object> updateQueue(@PathVariable("queueId") String queueId){
+        return new ResponseEntity<>("getQueueInfoById" + queueId , HttpStatus.OK);
+    }
+
+    @DeleteMapping(value = "/{queueId}")
+    public ResponseEntity<Object> deleteQueue(@PathVariable("queueId") String queueId){
+        return new ResponseEntity<>("createQueue", HttpStatus.OK);
     }
 }
