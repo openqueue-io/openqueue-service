@@ -1,4 +1,4 @@
-package io.openqueue.model;
+package io.openqueue.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,14 +11,10 @@ import java.time.Instant;
  * @author chenjing
  */
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class Ticket {
-    private String id;
-    private String queueId;
-    private Instant issueTime;
+public class TicketUsageStatDto {
     private Instant activateTime;
-    private int position;
     private int countOfUsage;
 }

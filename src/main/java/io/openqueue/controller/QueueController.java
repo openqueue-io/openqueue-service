@@ -1,5 +1,6 @@
 package io.openqueue.controller;
 
+import io.openqueue.dto.QueueConfigDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -16,23 +17,29 @@ import org.springframework.web.bind.annotation.*;
 public class QueueController {
     static  final Logger logger = LoggerFactory.getLogger(QueueController.class);
 
-    @PostMapping()
-    public ResponseEntity<Object> createQueue(@RequestBody String queueId){
-        return new ResponseEntity<>("createQueue", HttpStatus.OK);
+    @PostMapping(value = "/open")
+    public ResponseEntity<Object> openQueue(@RequestBody QueueConfigDto queueConfigDto){
+        return new ResponseEntity<>(queueConfigDto, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/{queueId}")
-    public ResponseEntity<Object> getQueueInfo(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("getQueueInfoById" + queueId , HttpStatus.OK);
+    @GetMapping(value = "/{queueId}/status")
+    public ResponseEntity<Object> getQueueStatus(@PathVariable("queueId") String queueId){
+        return new ResponseEntity<>("getQueueStatus:" + queueId , HttpStatus.OK);
     }
 
-    @PutMapping()
-    public ResponseEntity<Object> updateQueue(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("getQueueInfoById" + queueId , HttpStatus.OK);
+    @GetMapping(value = "/{queueId}/config")
+    public ResponseEntity<Object> getQueueConfig(@PathVariable("queueId") String queueId){
+        return new ResponseEntity<>("getQueueConfig:" + queueId , HttpStatus.OK);
     }
 
-    @DeleteMapping(value = "/{queueId}")
-    public ResponseEntity<Object> deleteQueue(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("createQueue", HttpStatus.OK);
+    @PutMapping(value = "/{queueId}/config")
+    public ResponseEntity<Object> updateQueueConfig(@PathVariable("queueId") String queueId,
+                                                    @RequestBody QueueConfigDto queueConfigDto){
+        return new ResponseEntity<>("adjustQueue:" + queueId , HttpStatus.OK);
+    }
+
+    @DeleteMapping(value = "/{queueId}/close")
+    public ResponseEntity<Object> closeQueue(@PathVariable("queueId") String queueId){
+        return new ResponseEntity<>("closeQueue:" + queueId, HttpStatus.OK);
     }
 }

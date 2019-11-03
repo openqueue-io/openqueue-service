@@ -5,10 +5,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
+/**
+ * @author chenjing
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class QueueDto {
-
+public class TicketDetailDto {
+    private String queueId;
+    private Instant issueTime;
+    private int position;
 }

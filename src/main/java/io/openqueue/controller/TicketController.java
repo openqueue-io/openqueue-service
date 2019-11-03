@@ -16,25 +16,38 @@ import org.springframework.web.bind.annotation.*;
 public class TicketController {
     static  final Logger logger = LoggerFactory.getLogger(TicketController.class);
 
-    @PostMapping()
-    public ResponseEntity<Object> applyTicket(@RequestBody String queueId){
+    @PostMapping(value = "/apply")
+    public ResponseEntity<Object> applyTicket(@RequestParam String queueId){
         return new ResponseEntity<>("createTicket:" + queueId, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/{ticketId}")
-    public ResponseEntity<Object> getTicketInfo(@PathVariable("ticketId") String ticketId){
-        return new ResponseEntity<>("getTicketInfo:" + ticketId , HttpStatus.OK);
+    @GetMapping(value = "/{ticketId}/detail")
+    public ResponseEntity<Object> getTicketDetail(@PathVariable("ticketId") String ticketId){
+        return new ResponseEntity<>("getTicketDetail:" + ticketId , HttpStatus.OK);
     }
 
-    @GetMapping(value = "/verify")
-    public ResponseEntity<Object> verifyTicket(@RequestParam("ticketId") String ticketId){
-        return new ResponseEntity<>("verifyTicket:" + ticketId , HttpStatus.OK);
+    @GetMapping(value = "/{ticketId}/usage_stat")
+    public ResponseEntity<Object> getTicketUsage(@PathVariable("ticketId") String ticketId){
+        return new ResponseEntity<>("getTicketUsage:" + ticketId , HttpStatus.OK);
     }
 
+    @GetMapping(value = "/{ticketId}/availability")
+    public ResponseEntity<Object> checkTicketAvailability(@PathVariable("ticketId") String ticketId){
+        return new ResponseEntity<>("isTicketAvailable:" + ticketId , HttpStatus.OK);
+    }
 
+    @PutMapping(value = "/{ticketId}/mark_in_use")
+    public ResponseEntity<Object> markTicketAsInUse(@PathVariable("ticketId") String ticketId){
+        return new ResponseEntity<>("markTicketAsUsed:" + ticketId , HttpStatus.OK);
+    }
 
-    @PutMapping()
-    public ResponseEntity<Object> updateQueue(@PathVariable("queueId") String queueId){
-        return new ResponseEntity<>("getQueueInfoById" + queueId , HttpStatus.OK);
+    @PutMapping(value = "/{ticketId}/activate")
+    public ResponseEntity<Object> activateTicket(@PathVariable("ticketId") String ticketId){
+        return new ResponseEntity<>("activateTicket:" + ticketId , HttpStatus.OK);
+    }
+
+    @DeleteMapping(value = "/{ticketId}/revoke")
+    public ResponseEntity<Object> revokeTicket(@PathVariable("ticketId") String ticketId){
+        return new ResponseEntity<>("revokeTicket:" + ticketId, HttpStatus.OK);
     }
 }

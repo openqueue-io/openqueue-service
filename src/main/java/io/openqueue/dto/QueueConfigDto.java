@@ -1,4 +1,4 @@
-package io.openqueue.model;
+package io.openqueue.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,16 +9,12 @@ import lombok.NoArgsConstructor;
  * @author chenjing
  */
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Builder
-public class Queue {
-    private String id;
+public class QueueConfigDto {
     private String name;
-    private String ownerId;
     private int capacity;
-    private int head;
-    private int tail;
     private int maxActiveUsers;
     private int availableMinutePerUser;
     private String callbackWebSite;
