@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.*;
 public class QueueController {
     static  final Logger logger = LoggerFactory.getLogger(QueueController.class);
 
-    @PostMapping(value = "/open")
-    public ResponseEntity<Object> openQueue(@RequestBody QueueConfigDto queueConfigDto){
+    @PostMapping(value = "/setup")
+    public ResponseEntity<Object> setupQueue(@RequestBody QueueConfigDto queueConfigDto){
         return new ResponseEntity<>(queueConfigDto, HttpStatus.OK);
     }
 
