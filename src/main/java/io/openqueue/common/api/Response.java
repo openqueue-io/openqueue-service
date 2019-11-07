@@ -12,8 +12,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BaseResponse {
-    private String message;
+public class Response<T> {
     @Builder.Default
-    private ResultCode code = ResultCode.SUCCESS;
+    private int code = ResultCode.SUCCESS.code;
+    @Builder.Default
+    private String message = ResultCode.SUCCESS.msg;
+    private T data;
+
+
 }
