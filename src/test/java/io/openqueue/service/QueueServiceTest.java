@@ -38,7 +38,7 @@ class QueueServiceTest {
 
     @Test
     void testSetupQueue() {
-        ResponseEntity<Object> responseEntity = queueService.setupQueue(queueConfigDto);
+        ResponseEntity responseEntity = queueService.setupQueue(queueConfigDto);
         JSONObject jsonRes = (JSONObject)JSON.toJSON(responseEntity.getBody());
         System.out.println("queue_id:" + jsonRes.getJSONObject("data").getString("queue_id"));
         assertThat(jsonRes.getJSONObject("data").containsKey("queue_id")).isTrue();

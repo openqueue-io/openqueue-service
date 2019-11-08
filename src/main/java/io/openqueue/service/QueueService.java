@@ -1,6 +1,6 @@
 package io.openqueue.service;
 
-import io.openqueue.common.api.Response;
+import io.openqueue.common.api.ResponseBody;
 import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.dto.QueueStatusDto;
 import io.openqueue.repo.QueueRepo;
@@ -22,45 +22,50 @@ public class QueueService {
     @Autowired
     private QueueRepo queueRepo;
 
-    public ResponseEntity<Object> setupQueue(QueueConfigDto queueConfigDto) {
+    public ResponseEntity setupQueue(QueueConfigDto queueConfigDto) {
         String id = "Q" + Math.abs(UUID.randomUUID().toString().hashCode());
 
         queueRepo.setupQueue(id, queueConfigDto);
 
         Map<String, String> data = new HashMap<>(1);
         data.put("queue_id", id);
-        Response<Map> response = new Response<>();
-        response.setData(data);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+
+        ResponseBody responseBody = ResponseBody.builder()
+                    .data(data)
+                    .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
     }
 
-    public ResponseEntity<Object> getQueueStatus(String queueId){
+    public ResponseEntity getQueueStatus(String queueId){
         QueueStatusDto queueStatusDto = queueRepo.getQueueStatus(queueId);
 
-        Response<QueueStatusDto> response = new Response<>();
-        response.setData(queueStatusDto);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        ResponseBody responseBody = ResponseBody.builder()
+                .data(queueStatusDto)
+                .build();
+        return ResponseEntity.ok(responseBody);
     }
 
-    public ResponseEntity<Object> getQueueConfig(String queueId){
+    public ResponseEntity getQueueConfig(String queueId){
         QueueConfigDto queueConfigDto = queueRepo.getQueueConfig(queueId);
 
-        Response<QueueConfigDto> response = new Response<>();
-        response.setData(queueConfigDto);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        ResponseBody responseBody = ResponseBody.builder()
+                .data(queueConfigDto)
+                .build();
+        return ResponseEntity.ok(responseBody);
     }
 
-    public ResponseEntity<Object> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto){
+    public ResponseEntity updateQueueConfig(String queueId, QueueConfigDto queueConfigDto){
         queueRepo.updateQueueConfig(queueId, queueConfigDto);
 
-        Response response = new Response<>();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        ResponseBody responseBody = ResponseBody.builder().build();
+        return ResponseEntity.ok(responseBody);
     }
 
-    public ResponseEntity<Object> closeQueue(String queueId) {
+    public ResponseEntity closeQueue(String queueId) {
         queueRepo.closeQueue(queueId);
 
-        Response response = new Response<>();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        ResponseBody responseBody = ResponseBody.builder().build();
+        return ResponseEntity.ok(responseBody);
     }
+
 }

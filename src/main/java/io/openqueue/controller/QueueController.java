@@ -23,28 +23,28 @@ public class QueueController {
     static  final Logger logger = LoggerFactory.getLogger(QueueController.class);
 
     @PostMapping(value = "/setup")
-    public ResponseEntity<Object> setupQueue(@RequestBody QueueConfigDto queueConfigDto){
+    public ResponseEntity setupQueue(@RequestBody QueueConfigDto queueConfigDto){
         return queueService.setupQueue(queueConfigDto);
     }
 
     @GetMapping(value = "/{queueId}/status")
-    public ResponseEntity<Object> getQueueStatus(@PathVariable("queueId") String queueId){
+    public ResponseEntity getQueueStatus(@PathVariable("queueId") String queueId){
         return queueService.getQueueStatus(queueId);
     }
 
     @GetMapping(value = "/{queueId}/config")
-    public ResponseEntity<Object> getQueueConfig(@PathVariable("queueId") String queueId){
+    public ResponseEntity getQueueConfig(@PathVariable("queueId") String queueId){
         return queueService.getQueueConfig(queueId);
     }
 
     @PutMapping(value = "/{queueId}/config")
-    public ResponseEntity<Object> updateQueueConfig(@PathVariable("queueId") String queueId,
+    public ResponseEntity updateQueueConfig(@PathVariable("queueId") String queueId,
                                                     @RequestBody QueueConfigDto queueConfigDto){
         return queueService.updateQueueConfig(queueId, queueConfigDto);
     }
 
     @DeleteMapping(value = "/{queueId}/close")
-    public ResponseEntity<Object> closeQueue(@PathVariable("queueId") String queueId){
+    public ResponseEntity closeQueue(@PathVariable("queueId") String queueId){
         return queueService.closeQueue(queueId);
     }
 }

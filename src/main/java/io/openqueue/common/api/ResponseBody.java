@@ -1,9 +1,6 @@
 package io.openqueue.common.api;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * @author chenjing
@@ -12,12 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Response<T> {
+public class ResponseBody {
     @Builder.Default
-    private int code = ResultCode.SUCCESS.code;
+    private int businessCode = ResultCode.SUCCESS.code;
     @Builder.Default
     private String message = ResultCode.SUCCESS.msg;
-    private T data;
-
-
+    private Object data;
 }
