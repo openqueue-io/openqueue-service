@@ -1,6 +1,10 @@
 package io.openqueue.common.api;
 
-import lombok.*;
+import com.alibaba.fastjson.JSONObject;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @author chenjing
@@ -10,9 +14,14 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ResponseBody {
-    @Builder.Default
-    private int businessCode = ResultCode.SUCCESS.code;
-    @Builder.Default
-    private String message = ResultCode.SUCCESS.msg;
+    private ResultCode resultCode;
     private Object data;
+
+    public JSONObject toJSON() {
+        JSONObject flattedJsonObject = new JSONObject();
+        flattedJsonObject.put("code", resultCode.code);
+        flattedJsonObject.put("message", resultCode.message);
+        flattedJsonObject.put("data", data);
+        return flattedJsonObject;
+    }
 }

@@ -1,7 +1,6 @@
 package io.openqueue.controller;
 
 import com.alibaba.fastjson.JSON;
-import io.openqueue.OpenqueueApplication;
 import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.service.QueueService;
 import org.junit.jupiter.api.Test;
@@ -12,12 +11,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK,classes = OpenqueueApplication.class)
+@SpringBootTest
 @AutoConfigureMockMvc
 class QueueControllerTest {
     @Autowired
@@ -29,7 +27,7 @@ class QueueControllerTest {
     @Test
     void testSetupQueue() throws Exception {
         QueueConfigDto queueConfigDto = QueueConfigDto.builder()
-                .availableMinutePerUser(5)
+                .availableSecondPerUser(300)
                 .callbackWebSite("openqueue.cloud")
                 .capacity(1000000)
                 .maxActiveUsers(1000)
@@ -47,7 +45,7 @@ class QueueControllerTest {
 
     @Test
     void testGetQueueStatus() throws Exception {
-        MvcResult mvcResult = mockMvc.perform(
+        mockMvc.perform(
                 get("/v1/queue/1234/status"))
                 .andReturn();
 
@@ -66,7 +64,7 @@ class QueueControllerTest {
     @Test
     void testUpdateQueueConfig() throws Exception {
         QueueConfigDto queueConfigDto = QueueConfigDto.builder()
-                .availableMinutePerUser(5)
+                .availableSecondPerUser(300)
                 .callbackWebSite("openqueue.cloud")
                 .capacity(1000000)
                 .maxActiveUsers(1000)

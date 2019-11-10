@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
  * @author chenjing
  */
 @RestController
-@RequestMapping("/v1/queue")
+@RequestMapping(value = "/v1/queue", produces="application/json")
 @Validated
 public class QueueController {
 
@@ -22,7 +22,7 @@ public class QueueController {
 
     static  final Logger logger = LoggerFactory.getLogger(QueueController.class);
 
-    @PostMapping(value = "/setup")
+    @PostMapping(value = "/setup", consumes="application/json")
     public ResponseEntity setupQueue(@RequestBody QueueConfigDto queueConfigDto){
         return queueService.setupQueue(queueConfigDto);
     }
@@ -37,7 +37,7 @@ public class QueueController {
         return queueService.getQueueConfig(queueId);
     }
 
-    @PutMapping(value = "/{queueId}/config")
+    @PutMapping(value = "/{queueId}/config", consumes="application/json")
     public ResponseEntity updateQueueConfig(@PathVariable("queueId") String queueId,
                                                     @RequestBody QueueConfigDto queueConfigDto){
         return queueService.updateQueueConfig(queueId, queueConfigDto);

@@ -15,11 +15,14 @@ import lombok.NoArgsConstructor;
 public class Queue {
     private String id;
     private String name;
-    private String ownerId;
+    @Builder.Default
+    private String ownerId = "visitor";
     private int capacity;
-    private int head;
-    private int tail;
+    @Builder.Default
+    private int head = 0;
+    @Builder.Default
+    private int tail = 0;
     private int maxActiveUsers;
-    private int availableMinutePerUser;
+    private int availableSecondPerUser;
     private String callbackWebSite;
 }

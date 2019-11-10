@@ -3,43 +3,40 @@ package io.openqueue.common.api;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import javax.servlet.http.HttpServletResponse;
-
 /**
  * Result Code Enum
  *
- * @author william
+ * @author chenjing
  */
 @Getter
 @AllArgsConstructor
 public enum ResultCode {
-    SUCCESS(HttpServletResponse.SC_OK, "Operation is Successful"),
+    /**
+     * Set up queue success
+     */
+    SETUP_QUEUE_SUCCESS(20100, "Already set up the queue with your config!"),
 
-    FAILURE(HttpServletResponse.SC_BAD_REQUEST, "Biz Exception"),
+    /**
+     * Get queue status success
+     */
+    GET_QUEUE_STATUS_SUCCESS(20001, "Get the queue's runtime status."),
 
-    UN_AUTHORIZED(HttpServletResponse.SC_UNAUTHORIZED, "Request Unauthorized"),
+    /**
+     * Get queue config success
+     */
+    GET_QUEUE_CONFIG_SUCCESS(20002, "Get the queue's config."),
 
-    NOT_FOUND(HttpServletResponse.SC_NOT_FOUND, "404 Not Found"),
+    /**
+     * Update queue config success
+     */
+    UPDATE_QUEUE_CONFIG_SUCCESS(20003, "Update the queue's config success!"),
 
-    MSG_NOT_READABLE(HttpServletResponse.SC_BAD_REQUEST, "Message Can't be Read"),
-
-    METHOD_NOT_SUPPORTED(HttpServletResponse.SC_METHOD_NOT_ALLOWED, "Method Not Supported"),
-
-    MEDIA_TYPE_NOT_SUPPORTED(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE, "Media Type Not Supported"),
-
-    REQ_REJECT(HttpServletResponse.SC_FORBIDDEN, "Request Rejected"),
-
-    INTERNAL_SERVER_ERROR(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal Server Error"),
-
-    PARAM_MISS(HttpServletResponse.SC_BAD_REQUEST, "Missing Required Parameter"),
-
-    PARAM_TYPE_ERROR(HttpServletResponse.SC_BAD_REQUEST, "Parameter Type Mismatch"),
-
-    PARAM_BIND_ERROR(HttpServletResponse.SC_BAD_REQUEST, "Parameter Binding Error"),
-
-    PARAM_VALID_ERROR(HttpServletResponse.SC_BAD_REQUEST, "Parameter Validation Error");
+    /**
+     * Close queue success
+     */
+    CLOSE_QUEUE_SUCCESS(20004, "Already closed and removed the queue!");
 
     final int code;
 
-    final String msg;
+    final String message;
 }
