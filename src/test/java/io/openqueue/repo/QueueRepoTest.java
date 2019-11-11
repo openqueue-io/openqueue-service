@@ -21,7 +21,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 class QueueRepoTest {
 
     @Autowired
-    QueueRepo queueRepo;
+    private QueueRepo queueRepo;
 
     @Autowired
     private RedisTemplate<String, Serializable> redisTemplate;
