@@ -21,11 +21,6 @@ public class TicketController {
         return new ResponseEntity<>("createTicket:" + queueId, HttpStatus.OK);
     }
 
-    @GetMapping(value = "/{ticketId}/detail")
-    public ResponseEntity<Object> getTicketDetail(@PathVariable("ticketId") String ticketId){
-        return new ResponseEntity<>("getTicketDetail:" + ticketId , HttpStatus.OK);
-    }
-
     @GetMapping(value = "/{ticketId}/usage_stat")
     public ResponseEntity<Object> getTicketUsage(@PathVariable("ticketId") String ticketId){
         return new ResponseEntity<>("getTicketUsage:" + ticketId , HttpStatus.OK);

@@ -16,9 +16,8 @@ import java.time.Instant;
 @Builder
 public class Ticket {
     private String id;
-    private String queueId;
+    private String authCode;
     private Instant issueTime;
     private Instant activateTime;
-    private int position;
     private int countOfUsage;
 }

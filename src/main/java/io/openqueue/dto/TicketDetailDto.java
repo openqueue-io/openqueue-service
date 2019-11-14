@@ -15,7 +15,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Builder
 public class TicketDetailDto {
-    private String queueId;
+    private String ticketId;
     private Instant issueTime;
-    private int position;
+    private String authCode;
 }
