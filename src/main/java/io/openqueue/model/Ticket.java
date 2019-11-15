@@ -18,6 +18,8 @@ public class Ticket {
     private String id;
     private String authCode;
     private Instant issueTime;
-    private Instant activateTime;
-    private int countOfUsage;
+    @Builder.Default
+    private boolean used = false;
+    @Builder.Default
+    private int countOfUsage = 0;
 }

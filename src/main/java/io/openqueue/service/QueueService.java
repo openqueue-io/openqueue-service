@@ -35,7 +35,7 @@ public class QueueService {
         QueueSetupDto queueSetupDto = QueueSetupDto.builder()
                 .queueId(qid)
                 .queueUrl("webapp.openqueue.cloud/q/" + qid)
-                .callbackFormat(queueConfigDto.getCallbackWebSite() + "?opq_ticket=xxxxxx")
+                .callbackFormat(queueConfigDto.getCallbackWebSite() + "?opcode=xxxxxx")
                 .build();
 
         ResponseBody responseBody = ResponseBody.builder()
