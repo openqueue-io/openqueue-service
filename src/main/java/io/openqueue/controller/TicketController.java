@@ -1,5 +1,6 @@
 package io.openqueue.controller;
 
+import io.openqueue.common.constant.TicketState;
 import io.openqueue.service.TicketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,32 +23,32 @@ public class TicketController {
     static  final Logger logger = LoggerFactory.getLogger(TicketController.class);
 
     @PostMapping(value = "/apply")
-    public ResponseEntity applyTicket(@RequestParam String queueId){
-        return ticketService.applyTicket(queueId);
+    public ResponseEntity applyTicket(@RequestParam String qid){
+        return ticketService.applyTicket(qid);
     }
 
-    @GetMapping(value = "/{ticketId}/usage_stat")
-    public ResponseEntity getTicketUsage(@PathVariable("ticketId") String ticketId){
-        return ticketService.getTicketUsage(ticketId);
+    @GetMapping(value = "/{ticket}/stat")
+    public ResponseEntity getTicketUsageStat(@PathVariable("ticket") String ticketIdAuth){
+        return ticketService.getTicketUsageStat(ticketIdAuth);
     }
 
-    @GetMapping(value = "/{ticketId}/availability")
-    public ResponseEntity checkTicketAvailability(@PathVariable("ticketId") String ticketId){
-        return ticketService.checkTicketAvailability(ticketId);
+    @GetMapping(value = "/{ticket}/authorization")
+    public ResponseEntity getTicketAuthorization(@PathVariable("{ticket}") String ticketIdAuth,
+                                                 @RequestParam String qid){
+        return ticketService.getTicketAuthorization(ticketIdAuth, qid);
     }
 
-    @PutMapping(value = "/{ticketId}/mark_ticket_in_use")
-    public ResponseEntity markTicketInUse(@PathVariable("ticketId") String ticketId){
-        return ticketService.markTicketInUse(ticketId);
-    }
-
-    @PutMapping(value = "/{ticketId}/activate")
-    public ResponseEntity activateTicket(@PathVariable("ticketId") String ticketId){
-        return ticketService.activateTicket(ticketId);
-    }
-
-    @DeleteMapping(value = "/{ticketId}/revoke")
-    public ResponseEntity revokeTicket(@PathVariable("ticketId") String ticketId){
-        return ticketService.revokeTicket(ticketId);
+    @PutMapping(value = "/{ticket}/state")
+    public ResponseEntity updateTicketState(@PathVariable("ticket") String ticket, @RequestParam String state){
+        switch (state) {
+            case TicketState.ACTIVE:
+                return ticketService.activateTicket(ticket);
+            case TicketState.USED:
+                return ticketService.markTicketInUse(ticket);
+            case TicketState.REVOKED:
+                return ticketService.revokeTicket(ticket);
+            default:
+                return null;
+        }
     }
 }

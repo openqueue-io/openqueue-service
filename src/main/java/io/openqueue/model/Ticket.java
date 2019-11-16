@@ -18,6 +18,7 @@ public class Ticket {
     private String id;
     private String authCode;
     private Instant issueTime;
+    private Instant activateTime;
     @Builder.Default
     private boolean used = false;
     @Builder.Default

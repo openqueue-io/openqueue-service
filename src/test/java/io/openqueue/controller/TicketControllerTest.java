@@ -23,7 +23,7 @@ class TicketControllerTest {
     @Test
     void testApplyTicket() throws Exception {
         mockMvc.perform(
-                post("/v1/ticket/apply?queueId=1234"))
+                post("/v1/ticket/apply?qid=1234"))
                 .andReturn();
 
         verify(ticketService).applyTicket("1234");
@@ -32,23 +32,23 @@ class TicketControllerTest {
     @Test
     void testGetTicketUsage() throws Exception {
         mockMvc.perform(
-                get("/v1/ticket/1234/usage_stat"))
+                get("/v1/ticket/1234/stat"))
                 .andReturn();
-        verify(ticketService).getTicketUsage("1234");
+        verify(ticketService).getTicketUsageStat("1234");
     }
 
     @Test
     void testCheckTicketAvailability() throws Exception {
         mockMvc.perform(
-                get("/v1/ticket/1234/availability"))
+                get("/v1/ticket/1234/authorization"))
                 .andReturn();
-        verify(ticketService).checkTicketAvailability("1234");
+        verify(ticketService).getTicketAuthorization("1234");
     }
 
     @Test
     void testMarkTicketInUse() throws Exception {
         mockMvc.perform(
-                put("/v1/ticket/1234/mark_ticket_in_use"))
+                put("/v1/ticket/1234/state?state=USED"))
                 .andReturn();
         verify(ticketService).markTicketInUse("1234");
     }
@@ -56,7 +56,7 @@ class TicketControllerTest {
     @Test
     void testActivateTicket() throws Exception {
         mockMvc.perform(
-                put("/v1/ticket/1234/activate"))
+                put("/v1/ticket/1234/state?state=ACTIVE"))
                 .andReturn();
         verify(ticketService).activateTicket("1234");
     }
@@ -64,7 +64,7 @@ class TicketControllerTest {
     @Test
     void testRevokeTicket() throws Exception {
         mockMvc.perform(
-                delete("/v1/ticket/1234/revoke"))
+                put("/v1/ticket/1234/state?state=REVOKED"))
                 .andReturn();
         verify(ticketService).revokeTicket("1234");
     }
