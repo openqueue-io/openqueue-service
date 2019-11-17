@@ -2,6 +2,7 @@ package io.openqueue.service;
 
 import io.openqueue.common.api.ResponseBody;
 import io.openqueue.common.api.ResultCode;
+import io.openqueue.common.exception.TicketServiceException;
 import io.openqueue.dto.TicketUsageStatDto;
 import io.openqueue.model.Ticket;
 import io.openqueue.repo.TicketRepo;
@@ -30,13 +31,18 @@ public class TicketService {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseBody.toJSON());
     }
 
-    public ResponseEntity getTicketUsageStat(String ticketId){
-        Ticket ticket = ticketRepo.findTicket(ticketId);
+    public ResponseEntity getTicketUsageStat(String ticketAuthCode){
+        String[] ticketParts = ticketAuthCode.split(".");
+        String queueId = ticketParts[0];
+        String ticketId = ticketParts[0] + ticketParts[1];
 
-        if (ticket == null) {
-            // TODO
-            // throw ticket not exist exception
+        boolean active = ticketRepo.isTicketActive(ticketAuthCode, queueId);
+
+        if (!active) {
+            throw new TicketServiceException(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
         }
+
+        Ticket ticket = ticketRepo.findTicket(ticketId);
 
         TicketUsageStatDto ticketUsageStatDto = TicketUsageStatDto.builder()
                 .countOfUsage(ticket.getCountOfUsage())
@@ -52,11 +58,21 @@ public class TicketService {
 
     }
 
-    public ResponseEntity getTicketAuthorization(String ticketId, String qid){
-        boolean active = ticketRepo.isTicketActive(ticketId);
+    public ResponseEntity getTicketAuthorization(String ticketAuthCode, String qid){
+        String queueId = ticketAuthCode.split(".")[0];
+        if (!queueId.equals(qid)) {
+            throw new TicketServiceException(ResultCode.MISMATCH_QUEUE_ID_EXCEPTION, HttpStatus.CONFLICT);
+        }
+
+        boolean active = ticketRepo.isTicketActive(ticketAuthCode, queueId);
         if (!active) {
-            // TODO
-            // throw ticket not active exception
+            throw new TicketServiceException(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
+        }
+
+        String ticketId = queueId + ticketAuthCode.split(".")[1];
+        Ticket ticket = ticketRepo.findTicket(ticketId);
+        if (ticket.isOccupied()) {
+            throw new TicketServiceException(ResultCode.TICKET_OCCUPIED_EXCEPTION, HttpStatus.CONFLICT);
         }
 
         ResponseBody responseBody = ResponseBody.builder()
@@ -65,28 +81,64 @@ public class TicketService {
         return ResponseEntity.ok(responseBody.toJSON());
     }
 
-    public ResponseEntity markTicketInUse(String ticketId){
-        boolean active = ticketRepo.isTicketActive(ticketId);
+    public ResponseEntity setTicketOccupied(String ticketAuthCode){
+        String queueId = ticketAuthCode.split(".")[0];
+
+        boolean active = ticketRepo.isTicketActive(ticketAuthCode, queueId);
         if (!active) {
-            // TODO
-            // throw ticket not active exception
+            throw new TicketServiceException(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
         }
-        ticketRepo.markTicketInUse(ticketId);
+
+        ticketRepo.setTicketOccupied(ticketAuthCode);
+
         ResponseBody responseBody = ResponseBody.builder()
-                .resultCode(ResultCode.MARK_TICKET_USED_SUCCESS)
+                .resultCode(ResultCode.SET_TICKET_OCCUPIED_SUCCESS)
                 .build();
-        return ResponseEntity.ok(responseBody.toJSON());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responseBody.toJSON());
     }
 
-    public ResponseEntity activateTicket(String ticketId){
-        boolean ready = ticketRepo.isTicketReadyForActivate(ticketId);
-        if (!ready) {
+    public ResponseEntity activateTicket(String ticketAuthCode){
+        String[] ticketParts = ticketAuthCode.split(".");
+        String queueId = ticketParts[0];
+        int position = Integer.parseInt(ticketParts[1]);
+        String ticketId = ticketParts[0] + ticketParts[1];
+        String authCode = ticketParts[2];
 
+        Ticket ticket = ticketRepo.findTicket(ticketId);
+        if (!authCode.equals(ticket.getAuthCode())) {
+            throw new TicketServiceException(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION, HttpStatus.UNAUTHORIZED);
         }
-        return null;
+
+        boolean ready = ticketRepo.isTicketReadyForActivate(queueId, position);
+        if (!ready) {
+            throw new TicketServiceException(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
+        }
+
+        ticketRepo.activateTicket(ticket);
+
+        ResponseBody responseBody = ResponseBody.builder()
+                .resultCode(ResultCode.ACTIVATE_TICKET_SUCCESS)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responseBody.toJSON());
     }
 
-    public ResponseEntity revokeTicket(String ticketId){
-        return null;
+    public ResponseEntity revokeTicket(String ticketAuthCode){
+        String[] ticketParts = ticketAuthCode.split(".");
+        String ticketId = ticketParts[0] + ticketParts[1];
+        String authCode = ticketParts[2];
+
+        Ticket ticket = ticketRepo.findTicket(ticketId);
+        if (!authCode.equals(ticket.getAuthCode())) {
+            throw new TicketServiceException(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION, HttpStatus.UNAUTHORIZED);
+        }
+
+        ticketRepo.revokeTicket(ticket);
+
+        ResponseBody responseBody = ResponseBody.builder()
+                .resultCode(ResultCode.REVOKE_TICKET_SUCCESS)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(responseBody.toJSON());
     }
 }

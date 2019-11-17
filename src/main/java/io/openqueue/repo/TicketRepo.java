@@ -17,23 +17,23 @@ public class TicketRepo {
         return null;
     }
 
-    public boolean isTicketActive(String ticketId){
+    public boolean isTicketActive(String ticketAuthCode, String queueId){
         return false;
     }
 
-    public boolean isTicketReadyForActivate(String ticketId){
+    public boolean isTicketReadyForActivate(String queueId, int position){
         return false;
     }
 
-    public void markTicketInUse(String ticketId){
+    public void setTicketOccupied(String ticketAuthCode){
 
     }
 
-    public void activateTicket(String ticketId){
+    public void activateTicket(Ticket ticket){
 
     }
 
-    public void revokeTicket(String ticketId){
+    public void revokeTicket(Ticket ticket){
 
     }
 }

@@ -12,16 +12,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum ResultCode {
     /**
-     * Set up queue success
-     */
-    SETUP_QUEUE_SUCCESS(20100, "Already set up the queue with your config!"),
-
-    /**
-     * Apply ticket success
-     */
-    APPLY_TICKET_SUCCESS(20101, "Apply ticket success!"),
-
-    /**
      * Get queue status success
      */
     GET_QUEUE_STATUS_SUCCESS(20001, "Get the queue's runtime status."),
@@ -52,9 +42,66 @@ public enum ResultCode {
     TICKET_AUTHORIZED_SUCCESS(20006, "This ticket is authorized."),
 
     /**
-     * Mark ticket used
+     * Set ticket occupied success
      */
-    MARK_TICKET_USED_SUCCESS(20007, "The ticket is marked as used.");
+    SET_TICKET_OCCUPIED_SUCCESS(20201, "The ticket has been set as occupied."),
+
+    /**
+     * Activate ticket success
+     */
+    ACTIVATE_TICKET_SUCCESS(20202, "The ticket has been activated."),
+
+    /**
+     * Revoke ticket success
+     */
+    REVOKE_TICKET_SUCCESS(20203, "The ticket has been revoked."),
+
+    /**
+     * Set up queue success
+     */
+    SETUP_QUEUE_SUCCESS(20100, "Already set up the queue with your config!"),
+
+    /**
+     * Apply ticket success
+     */
+    APPLY_TICKET_SUCCESS(20101, "Apply ticket success!"),
+
+    /**
+     * Illegal ticket auth code format
+     */
+    ILLEGAL_TICKET_AUTH_FORMAT_EXCEPTION(40001, "Illegal ticket auth code format."),
+
+    /**
+     * Mismatch ticket auth code
+     */
+    MISMATCH_TICKET_AUTH_CODE_EXCEPTION(40101, "Mismatch ticket auth code."),
+
+    /**
+     * Undefined ticket state
+     */
+    UNDEFINED_TICKET_STATE_EXCEPTION(40601, "New state is not acceptable because it is undefined."),
+
+    /**
+     * Ticket has been occupied
+     */
+    TICKET_OCCUPIED_EXCEPTION(40901, "This ticket has been occupied."),
+
+    /**
+     * Ticket is not belong to the queue.
+     */
+    MISMATCH_QUEUE_ID_EXCEPTION(40902, "This ticket is not belong to the queue."),
+
+    /**
+     * Ticket is not active
+     */
+    TICKET_NOT_ACTIVE_EXCEPTION(41201, "This ticket is not active."),
+
+    /**
+     * Ticket is not ready for activate
+     */
+    TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION(41202, "This ticket is not ready for activate.");
+
+
 
     final int code;
 

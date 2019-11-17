@@ -6,7 +6,7 @@ package io.openqueue.common.constant;
 public interface TicketState {
     String ACTIVE = "ACTIVE";
 
-    String USED = "USED";
+    String OCCUPIED = "OCCUPIED";
 
     String REVOKED = "REVOKED";
 }

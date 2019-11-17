@@ -42,15 +42,15 @@ class TicketControllerTest {
         mockMvc.perform(
                 get("/v1/ticket/1234/authorization"))
                 .andReturn();
-        verify(ticketService).getTicketAuthorization("1234");
+        verify(ticketService).getTicketAuthorization("1234", "");
     }
 
     @Test
     void testMarkTicketInUse() throws Exception {
         mockMvc.perform(
-                put("/v1/ticket/1234/state?state=USED"))
+                put("/v1/ticket/1234/state?state=OCCUPIED"))
                 .andReturn();
-        verify(ticketService).markTicketInUse("1234");
+        verify(ticketService).setTicketOccupied("1234");
     }
 
     @Test

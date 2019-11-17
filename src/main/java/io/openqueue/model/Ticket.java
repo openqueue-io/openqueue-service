@@ -20,7 +20,7 @@ public class Ticket {
     private Instant issueTime;
     private Instant activateTime;
     @Builder.Default
-    private boolean used = false;
+    private boolean Occupied = false;
     @Builder.Default
     private int countOfUsage = 0;
 }

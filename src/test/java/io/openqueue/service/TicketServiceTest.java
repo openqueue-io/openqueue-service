@@ -33,16 +33,16 @@ class TicketServiceTest {
 
     @Test
     void testGetTicketAuthorization(){
-        ticketService.getTicketAuthorization("1234");
-
-        verify(ticketRepo).getTicketAuthorization("1234");
+//        ticketService.getTicketAuthorization("1234", "qtest");
+//
+//        verify(ticketRepo).
     }
 
     @Test
     void testMarkTicketInUse(){
-        ticketService.markTicketInUse("1234");
+        ticketService.setTicketOccupied("1234");
 
-        verify(ticketRepo).markTicketInUse("1234");
+        verify(ticketRepo).setTicketOccupied("1234");
     }
 
     @Test
