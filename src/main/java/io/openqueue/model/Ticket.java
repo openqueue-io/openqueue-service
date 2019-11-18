@@ -17,10 +17,11 @@ import java.time.Instant;
 public class Ticket {
     private String id;
     private String authCode;
-    private Instant issueTime;
-    private Instant activateTime;
+    private long issueTime;
     @Builder.Default
-    private boolean Occupied = false;
+    private long activateTime = 0;
+    @Builder.Default
+    private boolean occupied = false;
     @Builder.Default
     private int countOfUsage = 0;
 }

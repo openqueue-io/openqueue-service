@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.openqueue.common.api.ResponseBody;
 import io.openqueue.common.api.ResultCode;
-import io.openqueue.common.util.RandomIdGenerator;
+import io.openqueue.common.util.RandomCodeGenerator;
 import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.dto.QueueSetupDto;
 import io.openqueue.dto.QueueStatusDto;
@@ -24,7 +24,7 @@ public class QueueService {
     private QueueRepo queueRepo;
 
     public ResponseEntity setupQueue(QueueConfigDto queueConfigDto) {
-        String qid = RandomIdGenerator.getRandomId();
+        String qid = "q:" + RandomCodeGenerator.get();
 
         JSONObject jsonObject = (JSONObject) JSON.toJSON(queueConfigDto);
         Queue queue = jsonObject.toJavaObject(Queue.class);

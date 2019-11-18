@@ -15,6 +15,6 @@ import java.time.Instant;
 @NoArgsConstructor
 @Builder
 public class TicketUsageStatDto {
-    private Instant activateTime;
+    private long activateTime;
     private int countOfUsage;
 }
