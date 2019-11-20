@@ -52,7 +52,6 @@ public class TicketRepo {
     }
 
     public void revokeTicket(String ticketId){
-        Object[] keys = redisTemplate.opsForHash().keys(ticketId).toArray();
-        redisTemplate.opsForHash().delete(ticketId, keys);
+        redisTemplate.delete(ticketId);
     }
 }

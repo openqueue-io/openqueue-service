@@ -6,6 +6,7 @@ import io.openqueue.common.exception.TicketServiceException;
 import io.openqueue.common.util.RandomCodeGenerator;
 import io.openqueue.dto.TicketAuthDto;
 import io.openqueue.dto.TicketUsageStatDto;
+import io.openqueue.model.Queue;
 import io.openqueue.model.Ticket;
 import io.openqueue.repo.QueueRepo;
 import io.openqueue.repo.TicketRepo;
@@ -28,8 +29,15 @@ public class TicketService {
     @Autowired
     private QueueRepo queueRepo;
 
+    private final String ACTIVE_SET_PREFIX = "set:active:";
+    private final String READY_SET_PREFIX = "set:ready:";
+
     public ResponseEntity applyTicket(String queueId){
-        int position = queueRepo.getAndPlusQueueTail(queueId);
+        Queue queue = queueRepo.getQueue(queueId);
+        if (queue == null) {
+            throw new TicketServiceException(ResultCode.TICKET_NOT_EXIST_EXCEPTION, HttpStatus.NOT_FOUND);
+        }
+        int position = queueRepo.incAndGetQueueTail(queueId);
         String authCode = RandomCodeGenerator.get();
         String ticketId = "t:" + queueId + ":" + position;
 
@@ -50,7 +58,7 @@ public class TicketService {
     }
 
     public ResponseEntity getTicketUsageStat( TicketAuthDto ticketAuthDto){
-        String queueActiveSetKey = "set:active:" + ticketAuthDto.getQueueId();
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
         boolean active = ticketRepo.isElementInSet(ticketAuthDto.getToken(), queueActiveSetKey);
 
         if (!active) {
@@ -78,7 +86,7 @@ public class TicketService {
             throw new TicketServiceException(ResultCode.MISMATCH_QUEUE_ID_EXCEPTION, HttpStatus.CONFLICT);
         }
 
-        String queueActiveSetKey = "set:active:" + ticketAuthDto.getQueueId();
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
         boolean active = ticketRepo.isElementInSet(ticketAuthDto.getToken(), queueActiveSetKey);
         if (!active) {
             throw new TicketServiceException(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
@@ -96,7 +104,7 @@ public class TicketService {
     }
 
     public ResponseEntity setTicketOccupied(TicketAuthDto ticketAuthDto){
-        String queueActiveSetKey = "set:active:" + ticketAuthDto.getQueueId();
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
         boolean active = ticketRepo.isElementInSet(ticketAuthDto.getToken(), queueActiveSetKey);
         if (!active) {
             throw new TicketServiceException(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
@@ -116,19 +124,22 @@ public class TicketService {
             throw new TicketServiceException(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION, HttpStatus.UNAUTHORIZED);
         }
 
-        String queueReadySetKey = "set:ready:" + ticketAuthDto.getQueueId();
-        boolean ready = ticketRepo.isElementInSet(ticketAuthDto.getTicketId(), queueReadySetKey);
-        if (!ready) {
-            throw new TicketServiceException(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
+        boolean active = ticketRepo.isElementInSet(ticketAuthDto.getToken(), queueActiveSetKey);
+
+        if (!active) {
+            String queueReadySetKey = READY_SET_PREFIX + ticketAuthDto.getQueueId();
+            boolean ready = ticketRepo.isElementInSet(ticketAuthDto.getTicketId(), queueReadySetKey);
+            if (!ready) {
+                throw new TicketServiceException(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
+            }
+
+            long expirationTime = Instant.now().getEpochSecond() +
+                    queueRepo.getQueue(ticketAuthDto.getQueueId()).getAvailableSecondPerUser();
+
+            ticketRepo.addElementToSet(ticketAuthDto.getToken(), queueActiveSetKey, expirationTime);
+            ticketRepo.removeElementOutOfSet(ticketAuthDto.getTicketId(), queueReadySetKey);
         }
-
-        String queueActiveSetKey = "set:active:" + ticketAuthDto.getQueueId();
-
-        long expirationTime = Instant.now().getEpochSecond() +
-                queueRepo.getQueue(ticketAuthDto.getQueueId()).getAvailableSecondPerUser();
-
-        ticketRepo.addElementToSet(ticketAuthDto.getToken(), queueActiveSetKey, expirationTime);
-        ticketRepo.removeElementOutOfSet(ticketAuthDto.getTicketId(), queueReadySetKey);
 
         ResponseBody responseBody = ResponseBody.builder()
                 .resultCode(ResultCode.ACTIVATE_TICKET_SUCCESS)
@@ -143,8 +154,8 @@ public class TicketService {
             throw new TicketServiceException(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION, HttpStatus.UNAUTHORIZED);
         }
 
-        String queueActiveSetKey = "set:active:" + ticketAuthDto.getQueueId();
-        String queueReadySetKey = "set:ready:" + ticketAuthDto.getQueueId();
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
+        String queueReadySetKey = READY_SET_PREFIX + ticketAuthDto.getQueueId();
         ticketRepo.removeElementOutOfSet(ticketAuthDto.getToken(), queueActiveSetKey);
         ticketRepo.removeElementOutOfSet(ticketAuthDto.getTicketId(), queueReadySetKey);
         ticketRepo.revokeTicket(ticketAuthDto.getTicketId());

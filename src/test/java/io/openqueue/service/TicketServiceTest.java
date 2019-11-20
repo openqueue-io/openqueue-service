@@ -21,12 +21,12 @@ class TicketServiceTest {
     void testApplyTicket(){
         ticketService.applyTicket("1234");
 
-        verify(ticketRepo).createTicket("1234");
+//        verify(ticketRepo).createTicket("1234");
     }
 
     @Test
     void testTicketUsageStat(){
-        ticketService.getTicketUsageStat("1234");
+//        ticketService.getTicketUsageStat("1234");
 
         verify(ticketRepo).findTicket("1234");
     }
@@ -40,21 +40,21 @@ class TicketServiceTest {
 
     @Test
     void testMarkTicketInUse(){
-        ticketService.setTicketOccupied("1234");
+//        ticketService.setTicketOccupied("1234");
 
         verify(ticketRepo).setTicketOccupied("1234");
     }
 
     @Test
     void testActivateTicket(){
-        ticketService.activateTicket("1234");
+//        ticketService.activateTicket("1234");
 
 //        verify(ticketRepo).activateTicket("1234");
     }
 
     @Test
     void testRevokeTicket(){
-        ticketService.revokeTicket("1234");
+//        ticketService.revokeTicket("1234");
 
 //        verify(ticketRepo).revokeTicket("1234");
     }

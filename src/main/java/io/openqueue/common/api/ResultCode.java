@@ -77,6 +77,11 @@ public enum ResultCode {
     MISMATCH_TICKET_AUTH_CODE_EXCEPTION(40101, "Mismatch ticket auth code."),
 
     /**
+     * Queue not exist
+     */
+    TICKET_NOT_EXIST_EXCEPTION(40401, "Queue not exist."),
+
+    /**
      * Undefined ticket state
      */
     UNDEFINED_TICKET_STATE_EXCEPTION(40601, "New state is not acceptable because it is undefined."),

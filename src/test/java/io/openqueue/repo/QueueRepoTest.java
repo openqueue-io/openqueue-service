@@ -14,6 +14,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 
 import java.io.Serializable;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -85,6 +87,19 @@ class QueueRepoTest {
                 .isEqualTo(expectQueue.getCapacity());
         assertThat(queueConfigDto.getMaxActiveUsers())
                 .isEqualTo(expectQueue.getMaxActiveUsers());
+    }
+
+    @Test
+    void testIncAndGetQueueTail() {
+        ExecutorService executorService = Executors.newCachedThreadPool();
+
+        for (int i = 0; i < 5000; i++) {
+            executorService.execute(() -> queueRepo.incAndGetQueueTail(testQueueId));
+        }
+        executorService.shutdown();
+
+        Queue queue = queueRepo.getQueue(testQueueId);
+        assertThat(queue.getTail()).isEqualTo(5000);
     }
 
     @Test

@@ -36,8 +36,8 @@ public class QueueRepo {
         return jsonObject.toJavaObject(Queue.class);
     }
 
-    public int getAndPlusQueueTail(String queueId) {
-        return 0;
+    public int incAndGetQueueTail(String queueId) {
+        return redisTemplate.opsForHash().increment(queueId, "tail", 1).intValue();
     }
 
     public void updateQueueConfig(String queueId, QueueConfigDto queueConfigDto) {
