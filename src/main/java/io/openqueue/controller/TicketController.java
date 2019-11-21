@@ -29,7 +29,7 @@ public class TicketController {
 
     @PostMapping(value = "/apply")
     public ResponseEntity applyTicket(@RequestParam String qid){
-        return ticketService.applyTicket(qid);
+        return ticketService.applyTicket("q:" + qid);
     }
 
     @GetMapping(value = "/{tokenBase64}/stat")
@@ -39,10 +39,10 @@ public class TicketController {
     }
 
     @GetMapping(value = "/{tokenBase64}/authorization")
-    public ResponseEntity getTicketAuthorization(@PathVariable("{tokenBase64}") String tokenBase64,
+    public ResponseEntity getTicketAuthorization(@PathVariable("tokenBase64") String tokenBase64,
                                                  @RequestParam String qid){
         TicketAuthDto ticketAuthDto = this.preprocess(tokenBase64);
-        return ticketService.getTicketAuthorization(ticketAuthDto, qid);
+        return ticketService.getTicketAuthorization(ticketAuthDto, "q:" + qid);
     }
 
     @PutMapping(value = "/{tokenBase64}/state")

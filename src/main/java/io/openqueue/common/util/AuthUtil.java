@@ -1,6 +1,6 @@
 package io.openqueue.common.util;
 
-import java.util.Arrays;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 
@@ -11,7 +11,7 @@ public class AuthUtil {
 
     public static String decodeUrlBase64(String base64) {
         Base64.Decoder decoder = Base64.getUrlDecoder();
-        return Arrays.toString(decoder.decode(base64));
+        return new String(decoder.decode(base64), StandardCharsets.UTF_8);
     }
 
     public static boolean ticketTokenValidate(String ticketToken) {
