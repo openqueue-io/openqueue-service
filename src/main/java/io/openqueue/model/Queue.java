@@ -24,5 +24,7 @@ public class Queue {
     private int tail = 0;
     private int maxActiveUsers;
     private int availableSecondPerUser;
+    @Builder.Default
+    private int holdTimeForActivate = 10;
     private String callbackWebSite;
 }

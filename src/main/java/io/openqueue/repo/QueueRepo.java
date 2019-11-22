@@ -9,8 +9,14 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.io.Serializable;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
+import static io.openqueue.common.constant.Keys.*;
+import static io.openqueue.common.constant.Keys.TICKET_PREFIX;
 
 /**
  * @author chenjing
@@ -24,6 +30,7 @@ public class QueueRepo {
     public void setupQueue(Queue queue) {
         JSONObject jsonObject = (JSONObject) JSON.toJSON(queue);
         redisTemplate.opsForHash().putAll(queue.getId(), jsonObject);
+        redisTemplate.opsForSet().add(ALL_QUEUES_SET, queue.getId());
     }
 
     public Queue getQueue(String queueId) {
@@ -36,8 +43,36 @@ public class QueueRepo {
         return jsonObject.toJavaObject(Queue.class);
     }
 
+    public Set getAllQueues() {
+        return redisTemplate.opsForSet().members(ALL_QUEUES_SET);
+    }
+
+    public boolean getQueueLock(String queueId, int timeout) {
+        return redisTemplate.opsForValue().setIfAbsent(LOCK_PREFIX + queueId, "Locked", Duration.ofSeconds(timeout));
+    }
+
     public int incAndGetQueueTail(String queueId) {
         return redisTemplate.opsForHash().increment(queueId, "tail", 1).intValue();
+    }
+
+    public void incQueueHead(String queueId, int increment) {
+        redisTemplate.opsForHash().increment(queueId, "head", increment);
+    }
+
+    public void removeExpiredTickets(String setKey, long timeout) {
+        redisTemplate.opsForZSet().removeRangeByScore(setKey, 0, timeout);
+    }
+
+    public int getTicketNumInSet(String setKey) {
+        return redisTemplate.opsForZSet().size(setKey).intValue();
+    }
+
+    public void addTicketToSet(String setKey, String ticketPrefix, int start, int increment, int timeout) {
+        for(int i = 1; i <= increment; ++i) {
+            redisTemplate.opsForZSet().add(setKey,
+                    ticketPrefix + ":" + (start + i),
+                    Instant.now().getEpochSecond() + timeout);
+        }
     }
 
     public void updateQueueConfig(String queueId, QueueConfigDto queueConfigDto) {
@@ -47,5 +82,6 @@ public class QueueRepo {
 
     public void closeQueue(String queueId) {
         redisTemplate.delete(queueId);
+        redisTemplate.opsForSet().remove(ALL_QUEUES_SET, queueId);
     }
 }

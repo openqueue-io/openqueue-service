@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
+import static io.openqueue.common.constant.Keys.ACTIVE_SET_PREFIX;
+import static io.openqueue.common.constant.Keys.READY_SET_PREFIX;
+
 /**
  * @author chenjing
  */
@@ -28,9 +31,6 @@ public class TicketService {
 
     @Autowired
     private QueueRepo queueRepo;
-
-    private final String ACTIVE_SET_PREFIX = "set:active:";
-    private final String READY_SET_PREFIX = "set:ready:";
 
     public ResponseEntity applyTicket(String queueId){
         Queue queue = queueRepo.getQueue(queueId);

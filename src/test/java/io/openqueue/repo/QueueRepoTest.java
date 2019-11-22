@@ -17,6 +17,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static io.openqueue.common.constant.Keys.READY_SET_PREFIX;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @SpringBootTest
@@ -50,6 +51,7 @@ class QueueRepoTest {
     void runBeforeEachTestMethod() {
         JSONObject jsonObject = (JSONObject) JSON.toJSON(queueTest);
         redisTemplate.opsForHash().putAll(testQueueId, jsonObject);
+        redisTemplate.opsForSet().add("queue", testQueueId);
     }
 
     @AfterEach
@@ -63,6 +65,10 @@ class QueueRepoTest {
         queueRepo.setupQueue(queueTest);
         Queue expectQueue = queueRepo.getQueue(testQueueId);
         assertThat(expectQueue.equals(queueTest)).isTrue();
+        Set queues = queueRepo.getAllQueues();
+        for (Object queueId: queues) {
+            assertThat(queueId.toString()).isEqualTo(testQueueId);
+        }
     }
 
     @Test
@@ -100,6 +106,14 @@ class QueueRepoTest {
 
         Queue queue = queueRepo.getQueue(testQueueId);
         assertThat(queue.getTail()).isEqualTo(5000);
+    }
+
+    @Test
+    void testGetAllQueues() {
+        Set queues = queueRepo.getAllQueues();
+        for (Object queueId: queues) {
+            System.out.println(queueId);
+        }
     }
 
     @Test
