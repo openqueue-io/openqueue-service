@@ -79,7 +79,7 @@ public enum ResultCode {
     /**
      * Queue not exist
      */
-    TICKET_NOT_EXIST_EXCEPTION(40401, "Queue not exist."),
+    QUEUE_NOT_EXIST_EXCEPTION(40401, "Queue not exist."),
 
     /**
      * Undefined ticket state

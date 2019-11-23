@@ -34,7 +34,7 @@ public class ScheduledQueueTask {
     @Scheduled(fixedRate = 5000)
     public void pushAllQueues() {
         Set queues = queueRepo.getAllQueues();
-        System.out.println("Number of queues:" + queues.size());
+        logger.info(String.format("Pushing queues...Total queues:%d", queues.size()));
 
         ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("push-queue-%d").build();
         ExecutorService executorService =
@@ -51,11 +51,8 @@ public class ScheduledQueueTask {
 
     private void pushQueue(String queueId) {
         Queue queue = queueRepo.getQueue(queueId);
-        logger.info(String.format("Queue:%s | Current head:%d | Current tail:%d",
-                queueId, queue.getHead(), queue.getTail()));
 
         if(queue.getHead() == queue.getTail()) {
-            logger.info("Queue:" + queueId + " doesn't need to push.");
             return;
         }
 
@@ -75,6 +72,7 @@ public class ScheduledQueueTask {
                 head, newUser, queue.getHoldTimeForActivate());
 
         queueRepo.incQueueHead(queueId, newUser);
-
+        logger.info(String.format("Queue:%s | Pushed new users: %d |Current head:%d | Current tail:%d",
+                queueId, newUser, queue.getHead() + newUser, queue.getTail()));
     }
 }

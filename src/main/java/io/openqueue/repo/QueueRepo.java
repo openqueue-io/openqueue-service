@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.openqueue.common.constant.Keys.*;
-import static io.openqueue.common.constant.Keys.TICKET_PREFIX;
 
 /**
  * @author chenjing

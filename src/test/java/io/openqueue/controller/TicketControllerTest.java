@@ -45,6 +45,11 @@ class TicketControllerTest {
                 .build();
     }
 
+    @Test
+    void test() {
+        String token = Base64.getUrlEncoder().encodeToString("t:q:3nHFKz:30:pWtrL".getBytes());
+        System.out.println(token);
+    }
 
     @Test
     void testApplyTicket() throws Exception {

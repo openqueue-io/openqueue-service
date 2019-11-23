@@ -35,7 +35,7 @@ public class TicketService {
     public ResponseEntity applyTicket(String queueId){
         Queue queue = queueRepo.getQueue(queueId);
         if (queue == null) {
-            throw new TicketServiceException(ResultCode.TICKET_NOT_EXIST_EXCEPTION, HttpStatus.NOT_FOUND);
+            throw new TicketServiceException(ResultCode.QUEUE_NOT_EXIST_EXCEPTION, HttpStatus.NOT_FOUND);
         }
         int position = queueRepo.incAndGetQueueTail(queueId);
         String authCode = RandomCodeGenerator.get();
