@@ -1,0 +1,18 @@
+server:
+  port: 8080
+  tomcat:
+    max-threads: 2000
+    max-connections: 20000
+
+spring:
+  redis:
+    host: 192.168.0.2
+    port: 6379
+    password:
+    timeout: 10000
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: 3000ms
+        min-idle: 0
+        max-idle: 5
