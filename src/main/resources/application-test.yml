@@ -1,8 +1,5 @@
 server:
   port: 8080
-  tomcat:
-    max-threads: 2000
-    max-connections: 20000
 
 spring:
   redis:

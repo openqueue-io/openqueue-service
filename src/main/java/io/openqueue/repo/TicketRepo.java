@@ -4,8 +4,11 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import io.openqueue.model.Ticket;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Mono;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -20,9 +23,16 @@ public class TicketRepo {
     @Autowired
     private RedisTemplate<String, Serializable> redisTemplate;
 
+    @Autowired
+    private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
+
+    public TicketRepo() {
+    }
+
     public void createTicket(Ticket ticket){
         JSONObject jsonObject = (JSONObject) JSON.toJSON(ticket);
-        redisTemplate.opsForHash().putAll(ticket.getId(), jsonObject);
+        Mono mono = reactiveRedisTemplate.opsForHash().putAll(ticket.getId(), jsonObject);
+        mono.subscribe();
     }
 
     public Ticket findTicket(String ticketId){

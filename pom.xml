@@ -10,20 +10,26 @@
 	</parent>
 	<groupId>io.openqueue</groupId>
 	<artifactId>openqueue-svc</artifactId>
-	<version>1.0.0</version>
+	<version>2.0.0</version>
 	<name>OpenQueue-Backend-Svc</name>
 	<description>Backend service for OpenQueue</description>
 	<url>https://www.openqueue.io</url>
 
 	<properties>
 		<java.version>11</java.version>
+		<skipTests>true</skipTests>
 	</properties>
 
 	<dependencies>
 		<!-- Spring Boot -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis-reactive</artifactId>
 		</dependency>
 
 		<dependency>
@@ -68,6 +74,7 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-pool2</artifactId>
