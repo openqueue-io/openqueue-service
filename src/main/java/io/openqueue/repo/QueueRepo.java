@@ -6,6 +6,7 @@ import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.model.Queue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Repository;
 
 import java.io.Serializable;
@@ -32,14 +33,13 @@ public class QueueRepo {
         redisTemplate.opsForSet().add(ALL_QUEUES_SET, queue.getId());
     }
 
+    @Nullable
     public Queue getQueue(String queueId) {
         Map queueMap = redisTemplate.opsForHash().entries(queueId);
         if(queueMap.size() == 0) {
             return null;
         }
-        Map<String, Object> tmp = new HashMap<>(queueMap);
-        JSONObject jsonObject = (JSONObject) JSON.toJSON(tmp);
-        return jsonObject.toJavaObject(Queue.class);
+        return JSON.toJavaObject((JSON) JSON.toJSON(queueMap),Queue.class);
     }
 
     public Set getAllQueues() {

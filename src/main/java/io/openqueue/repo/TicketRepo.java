@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 
@@ -33,13 +34,13 @@ public class TicketRepo {
         mono.subscribe();
     }
 
+    @Nullable
     public Ticket findTicket(String ticketId){
         Map queueMap = redisTemplate.opsForHash().entries(ticketId);
         if(queueMap.size() == 0) {
             return null;
         }
-        Map<String, Object> tmp = new HashMap<>(queueMap);
-        return JSON.toJavaObject((JSON)JSON.toJSON(tmp), Ticket.class);
+        return JSON.toJavaObject((JSON)JSON.toJSON(queueMap), Ticket.class);
     }
 
     public int incUsage(String ticketId) {
