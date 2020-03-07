@@ -39,8 +39,7 @@ public class TicketRepo {
             return null;
         }
         Map<String, Object> tmp = new HashMap<>(queueMap);
-        JSONObject jsonObject = (JSONObject) JSON.toJSON(tmp);
-        return jsonObject.toJavaObject(Ticket.class);
+        return JSON.toJavaObject((JSON)JSON.toJSON(tmp), Ticket.class);
     }
 
     public int incUsage(String ticketId) {
