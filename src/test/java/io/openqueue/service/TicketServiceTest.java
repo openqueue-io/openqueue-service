@@ -43,7 +43,7 @@ class TicketServiceTest {
         testQueueId = "q:3nHFKa";
         Queue queue = Queue.builder()
                 .availableSecondPerUser(300)
-                .callbackWebSite("xxx")
+                .callbackURL("xxx")
                 .capacity(10000)
                 .maxActiveUsers(500)
                 .name("test_queue")

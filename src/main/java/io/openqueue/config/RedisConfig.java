@@ -18,6 +18,7 @@ import java.io.Serializable;
 @Configuration
 @AutoConfigureAfter(RedisConfig.class)
 public class RedisConfig {
+
     @Bean
     public RedisTemplate<String, Serializable> redisTemplate(LettuceConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Serializable> template = new RedisTemplate<>();

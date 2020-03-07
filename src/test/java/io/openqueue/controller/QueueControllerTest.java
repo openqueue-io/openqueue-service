@@ -28,7 +28,7 @@ class QueueControllerTest {
     void testSetupQueue() throws Exception {
         QueueConfigDto queueConfigDto = QueueConfigDto.builder()
                 .availableSecondPerUser(300)
-                .callbackWebSite("openqueue.cloud")
+                .callbackURL("openqueue.cloud")
                 .capacity(1000000)
                 .maxActiveUsers(1000)
                 .name("opq_test")
@@ -65,7 +65,7 @@ class QueueControllerTest {
     void testUpdateQueueConfig() throws Exception {
         QueueConfigDto queueConfigDto = QueueConfigDto.builder()
                 .availableSecondPerUser(300)
-                .callbackWebSite("openqueue.cloud")
+                .callbackURL("openqueue.cloud")
                 .capacity(1000000)
                 .maxActiveUsers(1000)
                 .name("opq_test")

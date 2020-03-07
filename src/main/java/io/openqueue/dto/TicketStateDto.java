@@ -12,11 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class QueueConfigDto {
-    private String name;
-    @Builder.Default
-    private int capacity = 1000000;
-    private int maxActiveUsers;
-    private int availableSecondPerUser;
-    private String callbackURL;
+public class TicketStateDto {
+    private String state;
+    private String ticketToken;
 }

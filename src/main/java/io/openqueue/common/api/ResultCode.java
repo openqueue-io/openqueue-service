@@ -39,7 +39,7 @@ public enum ResultCode {
     /**
      * Ticket is authorized
      */
-    TICKET_AUTHORIZED_SUCCESS(20006, "This ticket is authorized."),
+    TICKET_AUTHORIZED_SUCCESS(20006, "This ticket was authorized."),
 
     /**
      * Set ticket occupied success

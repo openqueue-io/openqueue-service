@@ -23,8 +23,8 @@ public class QueueService {
     @Autowired
     private QueueRepo queueRepo;
 
-    public ResponseEntity setupQueue(QueueConfigDto queueConfigDto) {
-        String qid = "q:" + RandomCodeGenerator.get();
+    public ResponseEntity<JSONObject> setupQueue(QueueConfigDto queueConfigDto) {
+        String qid = "q:" + RandomCodeGenerator.getCode();
 
         JSONObject jsonObject = (JSONObject) JSON.toJSON(queueConfigDto);
         Queue queue = jsonObject.toJavaObject(Queue.class);
@@ -35,7 +35,7 @@ public class QueueService {
         QueueSetupDto queueSetupDto = QueueSetupDto.builder()
                 .queueId(qid)
                 .queueUrl("webapp.openqueue.cloud/q/" + qid.split(":")[1])
-                .callbackFormat(queueConfigDto.getCallbackWebSite() + "?opqticket=xxxxxx")
+                .callbackFormat(queueConfigDto.getCallbackURL() + "?opqticket=xxxxxx")
                 .build();
 
         ResponseBody responseBody = ResponseBody.builder()
@@ -45,7 +45,7 @@ public class QueueService {
         return ResponseEntity.status(HttpStatus.CREATED).body(responseBody.toJSON());
     }
 
-    public ResponseEntity getQueueStatus(String queueId){
+    public ResponseEntity<JSONObject> getQueueStatus(String queueId){
         Queue queue = queueRepo.getQueue(queueId);
         QueueStatusDto queueStatusDto = QueueStatusDto.builder()
                 .head(queue.getHead())
@@ -59,11 +59,11 @@ public class QueueService {
         return ResponseEntity.ok(responseBody.toJSON());
     }
 
-    public ResponseEntity getQueueConfig(String queueId){
+    public ResponseEntity<JSONObject> getQueueConfig(String queueId){
         Queue queue = queueRepo.getQueue(queueId);
 
         QueueConfigDto queueConfigDto = QueueConfigDto.builder()
-                .callbackWebSite(queue.getCallbackWebSite())
+                .callbackURL(queue.getCallbackURL())
                 .capacity(queue.getCapacity())
                 .maxActiveUsers(queue.getMaxActiveUsers())
                 .name(queue.getName())
@@ -77,7 +77,7 @@ public class QueueService {
         return ResponseEntity.ok(responseBody.toJSON());
     }
 
-    public ResponseEntity updateQueueConfig(String queueId, QueueConfigDto queueConfigDto){
+    public ResponseEntity<JSONObject> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto){
         queueRepo.updateQueueConfig(queueId, queueConfigDto);
 
         ResponseBody responseBody = ResponseBody.builder()
@@ -86,7 +86,7 @@ public class QueueService {
         return ResponseEntity.ok(responseBody.toJSON());
     }
 
-    public ResponseEntity closeQueue(String queueId) {
+    public ResponseEntity<JSONObject> closeQueue(String queueId) {
         queueRepo.closeQueue(queueId);
 
         ResponseBody responseBody = ResponseBody

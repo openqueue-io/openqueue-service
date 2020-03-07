@@ -38,7 +38,7 @@ class QueueRepoTest {
         queueTest = Queue.builder()
                 .id("20sDO3")
                 .availableSecondPerUser(300)
-                .callbackWebSite("openqueue.io")
+                .callbackURL("openqueue.io")
                 .capacity(100000)
                 .maxActiveUsers(1000)
                 .name("test_queue")
@@ -78,13 +78,13 @@ class QueueRepoTest {
                 .name("new_name")
                 .maxActiveUsers(3000)
                 .capacity(100000)
-                .callbackWebSite("openqueue.io")
+                .callbackURL("openqueue.io")
                 .build();
         queueRepo.updateQueueConfig(testQueueId, queueConfigDto);
 
         Queue expectQueue = queueRepo.getQueue(testQueueId);
-        assertThat(queueConfigDto.getCallbackWebSite())
-                .isEqualTo(expectQueue.getCallbackWebSite());
+        assertThat(queueConfigDto.getCallbackURL())
+                .isEqualTo(expectQueue.getCallbackURL());
         assertThat(queueConfigDto.getName())
                 .isEqualTo(expectQueue.getName());
         assertThat(queueConfigDto.getAvailableSecondPerUser())

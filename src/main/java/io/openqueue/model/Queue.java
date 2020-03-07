@@ -26,5 +26,5 @@ public class Queue {
     private int availableSecondPerUser;
     @Builder.Default
     private int holdTimeForActivate = 10;
-    private String callbackWebSite;
+    private String callbackURL;
 }

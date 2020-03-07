@@ -1,6 +1,8 @@
 package io.openqueue.controller;
 
+import com.alibaba.fastjson.JSON;
 import io.openqueue.dto.TicketAuthDto;
+import io.openqueue.dto.TicketStateDto;
 import io.openqueue.service.TicketService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -62,7 +64,7 @@ class TicketControllerTest {
 
     @Test
     void testGetTicketUsage() throws Exception {
-        String reqUrl = String.format("/v1/ticket/%s/stat", token);
+        String reqUrl = "/v1/ticket/stat?ticket=" + token;
         System.out.println(reqUrl);
         mockMvc.perform(
                 get(reqUrl))
@@ -72,7 +74,7 @@ class TicketControllerTest {
 
     @Test
     void testGetTicketAuthorization() throws Exception {
-        String reqUrl = String.format("/v1/ticket/%s/authorization?qid=1234", token);
+        String reqUrl = "/v1/ticket/authorization?qid=1234&ticket=" + token;
         System.out.println(reqUrl);
         mockMvc.perform(
                 get(reqUrl))
@@ -82,30 +84,49 @@ class TicketControllerTest {
 
     @Test
     void testMarkTicketInUse() throws Exception {
-        String reqUrl = String.format("/v1/ticket/%s/state?state=OCCUPIED", token);
+        String reqUrl = "/v1/ticket/state";
         System.out.println(reqUrl);
+
+        TicketStateDto ticketStateDto = TicketStateDto.builder()
+                .state("OCCUPIED")
+                .ticketToken(token)
+                .build();
+
         mockMvc.perform(
-                put(reqUrl))
+                put(reqUrl).contentType("application/json").content(JSON.toJSONString(ticketStateDto)))
                 .andReturn();
+
         verify(ticketService).setTicketOccupied(ticketAuthDto);
     }
 
     @Test
     void testActivateTicket() throws Exception {
-        String reqUrl = String.format("/v1/ticket/%s/state?state=ACTIVE", token);
+        String reqUrl = "/v1/ticket/state";
         System.out.println(reqUrl);
+
+        TicketStateDto ticketStateDto = TicketStateDto.builder()
+                .state("ACTIVE")
+                .ticketToken(token)
+                .build();
+
         mockMvc.perform(
-                put(reqUrl))
+                put(reqUrl).contentType("application/json").content(JSON.toJSONString(ticketStateDto)))
                 .andReturn();
         verify(ticketService).activateTicket(ticketAuthDto);
     }
 
     @Test
     void testRevokeTicket() throws Exception {
-        String reqUrl = String.format("/v1/ticket/%s/state?state=REVOKED", token);
+        String reqUrl = "/v1/ticket/state";
         System.out.println(reqUrl);
+
+        TicketStateDto ticketStateDto = TicketStateDto.builder()
+                .state("REVOKED")
+                .ticketToken(token)
+                .build();
+
         mockMvc.perform(
-                put(reqUrl))
+                put(reqUrl).contentType("application/json").content(JSON.toJSONString(ticketStateDto)))
                 .andReturn();
         verify(ticketService).revokeTicket(ticketAuthDto);
     }

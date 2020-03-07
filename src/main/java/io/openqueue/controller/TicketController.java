@@ -1,10 +1,12 @@
 package io.openqueue.controller;
 
+import com.alibaba.fastjson.JSONObject;
 import io.openqueue.common.api.ResultCode;
 import io.openqueue.common.constant.TicketState;
 import io.openqueue.common.exception.TicketServiceException;
 import io.openqueue.common.util.AuthUtil;
 import io.openqueue.dto.TicketAuthDto;
+import io.openqueue.dto.TicketStateDto;
 import io.openqueue.service.TicketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,28 +30,28 @@ public class TicketController {
     static final Logger logger = LoggerFactory.getLogger(TicketController.class);
 
     @PostMapping(value = "/apply")
-    public ResponseEntity applyTicket(@RequestParam String qid){
+    public ResponseEntity<JSONObject> applyTicket(@RequestParam String qid){
         return ticketService.applyTicket("q:" + qid);
     }
 
-    @GetMapping(value = "/{tokenBase64}/stat")
-    public ResponseEntity getTicketUsageStat(@PathVariable("tokenBase64") String tokenBase64){
-        TicketAuthDto ticketAuthDto = this.preprocess(tokenBase64);
+    @GetMapping(value = "/stat")
+    public ResponseEntity<JSONObject> getTicketUsageStat(@RequestParam String ticket){
+        TicketAuthDto ticketAuthDto = this.preprocess(ticket);
         return ticketService.getTicketUsageStat(ticketAuthDto);
     }
 
-    @GetMapping(value = "/{tokenBase64}/authorization")
-    public ResponseEntity getTicketAuthorization(@PathVariable("tokenBase64") String tokenBase64,
+    @GetMapping(value = "/authorization")
+    public ResponseEntity<JSONObject> getTicketAuthorization(@RequestParam String ticket,
                                                  @RequestParam String qid){
-        TicketAuthDto ticketAuthDto = this.preprocess(tokenBase64);
+        TicketAuthDto ticketAuthDto = this.preprocess(ticket);
         return ticketService.getTicketAuthorization(ticketAuthDto, "q:" + qid);
     }
 
-    @PutMapping(value = "/{tokenBase64}/state")
-    public ResponseEntity updateTicketState(@PathVariable("tokenBase64") String tokenBase64, @RequestParam String state){
-        TicketAuthDto ticketAuthDto = this.preprocess(tokenBase64);
+    @PutMapping(value = "/state")
+    public ResponseEntity<JSONObject> updateTicketState(@RequestBody TicketStateDto ticketStateDto){
+        TicketAuthDto ticketAuthDto = this.preprocess(ticketStateDto.getTicketToken());
 
-        switch (state) {
+        switch (ticketStateDto.getState()) {
             case TicketState.ACTIVE:
                 return ticketService.activateTicket(ticketAuthDto);
             case TicketState.OCCUPIED:
