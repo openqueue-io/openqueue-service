@@ -58,6 +58,26 @@ class TicketRepoTest {
     }
 
     @Test
+    void testIncUsageAndSetActivateTime() {
+        Ticket ticket = Ticket.builder()
+                .authCode("1asdIU2ay")
+                .issueTime(Instant.now().getEpochSecond())
+                .id(testTicketId)
+                .build();
+
+        ticketRepo.createTicket(ticket);
+
+        ticketRepo.incUsage(ticket.getId());
+
+        long currentTime = Instant.now().getEpochSecond();
+        ticketRepo.setActivateTime(ticket.getId(), currentTime);
+
+        Ticket ticket1 = ticketRepo.findTicket(testTicketId);
+        assertThat(ticket1.getCountOfUsage()).isEqualTo(1);
+        assertThat(ticket1.getActivateTime()).isEqualTo(currentTime);
+    }
+
+    @Test
     void testAddCheckDeleteElementInSet() {
         String activeSet = "set:active:" + testQueueId;
 

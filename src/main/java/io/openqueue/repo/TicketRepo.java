@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Mono;
 
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,9 +27,6 @@ public class TicketRepo {
     @Autowired
     private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
-    public TicketRepo() {
-    }
-
     public void createTicket(Ticket ticket){
         JSONObject jsonObject = (JSONObject) JSON.toJSON(ticket);
         Mono mono = reactiveRedisTemplate.opsForHash().putAll(ticket.getId(), jsonObject);
@@ -43,6 +41,14 @@ public class TicketRepo {
         Map<String, Object> tmp = new HashMap<>(queueMap);
         JSONObject jsonObject = (JSONObject) JSON.toJSON(tmp);
         return jsonObject.toJavaObject(Ticket.class);
+    }
+
+    public int incUsage(String ticketId) {
+        return redisTemplate.opsForHash().increment(ticketId, "countOfUsage", 1).intValue();
+    }
+
+    public void setActivateTime(String ticketId, long currentTime) {
+        redisTemplate.opsForHash().put(ticketId, "activateTime", currentTime);
     }
 
     public boolean isElementInSet(String element, String setKey){
