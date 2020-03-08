@@ -36,11 +36,12 @@ public class TicketRepo {
 
     @Nullable
     public Ticket findTicket(String ticketId){
-        Map queueMap = redisTemplate.opsForHash().entries(ticketId);
-        if(queueMap.size() == 0) {
+        Map ticketMap = redisTemplate.opsForHash().entries(ticketId);
+        if(ticketMap.size() == 0) {
             return null;
         }
-        return JSON.toJavaObject((JSON)JSON.toJSON(queueMap), Ticket.class);
+        JSON ticketJson = (JSON)JSON.toJSON(ticketMap);
+        return ticketJson.toJavaObject(Ticket.class);
     }
 
     public int incUsage(String ticketId) {

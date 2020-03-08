@@ -39,7 +39,8 @@ public class QueueRepo {
         if(queueMap.size() == 0) {
             return null;
         }
-        return JSON.toJavaObject((JSON) JSON.toJSON(queueMap),Queue.class);
+        JSON queueJson = (JSON) JSON.toJSON(queueMap);
+        return queueJson.toJavaObject(Queue.class);
     }
 
     public Set getAllQueues() {
