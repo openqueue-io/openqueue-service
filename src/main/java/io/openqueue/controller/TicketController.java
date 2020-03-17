@@ -1,6 +1,7 @@
 package io.openqueue.controller;
 
 import com.alibaba.fastjson.JSONObject;
+import io.openqueue.common.api.ResponseBody;
 import io.openqueue.common.api.ResultCode;
 import io.openqueue.common.constant.TicketState;
 import io.openqueue.common.exception.TicketServiceException;
@@ -15,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 /**
  * @author chenjing
@@ -30,25 +32,25 @@ public class TicketController {
     static final Logger logger = LoggerFactory.getLogger(TicketController.class);
 
     @PostMapping(value = "/apply")
-    public ResponseEntity<JSONObject> applyTicket(@RequestParam String qid){
+    public Mono<ResponseEntity<ResponseBody>> applyTicket(@RequestParam String qid){
         return ticketService.applyTicket("q:" + qid);
     }
 
     @GetMapping(value = "/stat")
-    public ResponseEntity<JSONObject> getTicketUsageStat(@RequestParam String ticket){
+    public ResponseEntity<ResponseBody> getTicketUsageStat(@RequestParam String ticket){
         TicketAuthDto ticketAuthDto = this.preprocess(ticket);
         return ticketService.getTicketUsageStat(ticketAuthDto);
     }
 
     @GetMapping(value = "/authorization")
-    public ResponseEntity<JSONObject> getTicketAuthorization(@RequestParam String ticket,
+    public ResponseEntity<ResponseBody> getTicketAuthorization(@RequestParam String ticket,
                                                  @RequestParam String qid){
         TicketAuthDto ticketAuthDto = this.preprocess(ticket);
         return ticketService.getTicketAuthorization(ticketAuthDto, "q:" + qid);
     }
 
     @PutMapping(value = "/state")
-    public ResponseEntity<JSONObject> updateTicketState(@RequestBody TicketStateDto ticketStateDto){
+    public ResponseEntity<ResponseBody> updateTicketState(@RequestBody TicketStateDto ticketStateDto){
         TicketAuthDto ticketAuthDto = this.preprocess(ticketStateDto.getTicketToken());
 
         switch (ticketStateDto.getState()) {
@@ -66,7 +68,7 @@ public class TicketController {
     private TicketAuthDto preprocess(String tokenBase64) {
         String token = AuthUtil.decodeUrlBase64(tokenBase64);
 
-        if (!AuthUtil.ticketTokenValidate(token)) {
+        if (!AuthUtil.validateTicketToken(token)) {
             throw new TicketServiceException(ResultCode.ILLEGAL_TICKET_AUTH_FORMAT_EXCEPTION, HttpStatus.BAD_REQUEST);
         }
 

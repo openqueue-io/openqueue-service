@@ -23,7 +23,7 @@ public class QueueService {
     @Autowired
     private QueueRepo queueRepo;
 
-    public ResponseEntity<JSONObject> setupQueue(QueueConfigDto queueConfigDto) {
+    public ResponseEntity<ResponseBody> setupQueue(QueueConfigDto queueConfigDto) {
         String qid = "q:" + RandomCodeGenerator.getCode();
 
         JSONObject jsonObject = (JSONObject) JSON.toJSON(queueConfigDto);
@@ -38,62 +38,54 @@ public class QueueService {
                 .callbackFormat(queueConfigDto.getCallbackURL() + "?opqticket=xxxxxx")
                 .build();
 
-        ResponseBody responseBody = ResponseBody.builder()
-                    .resultCode(ResultCode.SETUP_QUEUE_SUCCESS)
-                    .data(queueSetupDto)
-                    .build();
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody.toJSON());
+        ResponseBody responseBody = new ResponseBody(ResultCode.SETUP_QUEUE_SUCCESS, queueSetupDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseBody);
     }
 
-    public ResponseEntity<JSONObject> getQueueStatus(String queueId){
-        Queue queue = queueRepo.getQueue(queueId);
-        QueueStatusDto queueStatusDto = QueueStatusDto.builder()
-                .head(queue.getHead())
-                .tail(queue.getTail())
-                .build();
-
-        ResponseBody responseBody = ResponseBody.builder()
-                .resultCode(ResultCode.GET_QUEUE_STATUS_SUCCESS)
-                .data(queueStatusDto)
-                .build();
-        return ResponseEntity.ok(responseBody.toJSON());
+    public ResponseEntity<ResponseBody> getQueueStatus(String queueId){
+//        Queue queue = queueRepo.getQueue(queueId);
+//        QueueStatusDto queueStatusDto = QueueStatusDto.builder()
+//                .head(queue.getHead())
+//                .tail(queue.getTail())
+//                .build();
+//
+//        ResponseBody responseBody = ResponseBody.builder()
+//                .resultCode(ResultCode.GET_QUEUE_STATUS_SUCCESS)
+//                .data(queueStatusDto)
+//                .build();
+        return ResponseEntity.ok().build();
     }
 
-    public ResponseEntity<JSONObject> getQueueConfig(String queueId){
-        Queue queue = queueRepo.getQueue(queueId);
-
-        QueueConfigDto queueConfigDto = QueueConfigDto.builder()
-                .callbackURL(queue.getCallbackURL())
-                .capacity(queue.getCapacity())
-                .maxActiveUsers(queue.getMaxActiveUsers())
-                .name(queue.getName())
-                .availableSecondPerUser(queue.getAvailableSecondPerUser())
-                .build();
-
-        ResponseBody responseBody = ResponseBody.builder()
-                .resultCode(ResultCode.GET_QUEUE_CONFIG_SUCCESS)
-                .data(queueConfigDto)
-                .build();
-        return ResponseEntity.ok(responseBody.toJSON());
+    public ResponseEntity<ResponseBody> getQueueConfig(String queueId){
+//        Queue queue = queueRepo.getQueue(queueId);
+//
+//        QueueConfigDto queueConfigDto = QueueConfigDto.builder()
+//                .callbackURL(queue.getCallbackURL())
+//                .capacity(queue.getCapacity())
+//                .maxActiveUsers(queue.getMaxActiveUsers())
+//                .name(queue.getName())
+//                .availableSecondPerUser(queue.getAvailableSecondPerUser())
+//                .build();
+//
+//        ResponseBody responseBody = ResponseBody.builder()
+//                .resultCode(ResultCode.GET_QUEUE_CONFIG_SUCCESS)
+//                .data(queueConfigDto)
+//                .build();
+        return ResponseEntity.ok().build();
     }
 
-    public ResponseEntity<JSONObject> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto){
+    public ResponseEntity<ResponseBody> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto){
         queueRepo.updateQueueConfig(queueId, queueConfigDto);
 
-        ResponseBody responseBody = ResponseBody.builder()
-                .resultCode(ResultCode.UPDATE_QUEUE_CONFIG_SUCCESS)
-                .build();
-        return ResponseEntity.ok(responseBody.toJSON());
+        ResponseBody responseBody = new ResponseBody(ResultCode.UPDATE_QUEUE_CONFIG_SUCCESS);
+        return ResponseEntity.ok(responseBody);
     }
 
-    public ResponseEntity<JSONObject> closeQueue(String queueId) {
+    public ResponseEntity<ResponseBody> closeQueue(String queueId) {
         queueRepo.closeQueue(queueId);
 
-        ResponseBody responseBody = ResponseBody
-                .builder()
-                .resultCode(ResultCode.CLOSE_QUEUE_SUCCESS)
-                .build();
-        return ResponseEntity.ok(responseBody.toJSON());
+        ResponseBody responseBody = new ResponseBody(ResultCode.CLOSE_QUEUE_SUCCESS);
+        return ResponseEntity.ok(responseBody);
     }
 
 }

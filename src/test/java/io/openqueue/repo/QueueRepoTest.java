@@ -10,14 +10,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.io.Serializable;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Map;
+import java.util.stream.IntStream;
 
-import static io.openqueue.common.constant.Keys.READY_SET_PREFIX;
+import static io.openqueue.common.constant.Keys.ALL_QUEUES_SET;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @SpringBootTest
@@ -27,7 +29,7 @@ class QueueRepoTest {
     private QueueRepo queueRepo;
 
     @Autowired
-    private RedisTemplate<String, Serializable> redisTemplate;
+    private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
     private static Queue queueTest;
 
@@ -36,7 +38,7 @@ class QueueRepoTest {
     @BeforeAll
     static void runBeforeAllTestMethod() {
         queueTest = Queue.builder()
-                .id("20sDO3")
+                .id("q:20sDO3")
                 .availableSecondPerUser(300)
                 .callbackURL("openqueue.io")
                 .capacity(100000)
@@ -44,14 +46,15 @@ class QueueRepoTest {
                 .name("test_queue")
                 .ownerId("admin")
                 .build();
-        testQueueId = "20sDO3";
+        testQueueId = "q:20sDO3";
     }
 
     @BeforeEach
     void runBeforeEachTestMethod() {
-        JSONObject jsonObject = (JSONObject) JSON.toJSON(queueTest);
-        redisTemplate.opsForHash().putAll(testQueueId, jsonObject);
-        redisTemplate.opsForSet().add("queue", testQueueId);
+        Map<String, Object> attrMap = (JSONObject) JSON.toJSON(queueTest);
+        reactiveRedisTemplate.opsForHash().putAll(testQueueId, attrMap)
+                .then(reactiveRedisTemplate.opsForSet().add(ALL_QUEUES_SET, testQueueId))
+                .block();
     }
 
     @AfterEach
@@ -62,13 +65,21 @@ class QueueRepoTest {
     @Test
     void testSetupQueue() {
         cleanup();
-        queueRepo.setupQueue(queueTest);
-        Queue expectQueue = queueRepo.getQueue(testQueueId);
-        assertThat(expectQueue.equals(queueTest)).isTrue();
-        Set queues = queueRepo.getAllQueues();
-        for (Object queueId: queues) {
-            assertThat(queueId.toString()).isEqualTo(testQueueId);
-        }
+
+        StepVerifier.create(queueRepo.setupQueue(queueTest))
+                .expectNext(Boolean.TRUE)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.findQueue(testQueueId))
+                .expectNext(queueTest)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.findAllQueues())
+                .expectNext(testQueueId)
+                .expectComplete()
+                .verify();
     }
 
     @Test
@@ -80,52 +91,109 @@ class QueueRepoTest {
                 .capacity(100000)
                 .callbackURL("openqueue.io")
                 .build();
-        queueRepo.updateQueueConfig(testQueueId, queueConfigDto);
 
-        Queue expectQueue = queueRepo.getQueue(testQueueId);
-        assertThat(queueConfigDto.getCallbackURL())
-                .isEqualTo(expectQueue.getCallbackURL());
-        assertThat(queueConfigDto.getName())
-                .isEqualTo(expectQueue.getName());
-        assertThat(queueConfigDto.getAvailableSecondPerUser())
-                .isEqualTo(expectQueue.getAvailableSecondPerUser());
-        assertThat(queueConfigDto.getCapacity())
-                .isEqualTo(expectQueue.getCapacity());
-        assertThat(queueConfigDto.getMaxActiveUsers())
-                .isEqualTo(expectQueue.getMaxActiveUsers());
+        StepVerifier.create(queueRepo.updateQueueConfig(testQueueId, queueConfigDto))
+                .expectNext(Boolean.TRUE)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.findQueue(testQueueId))
+                .assertNext(queue -> {
+                    assertThat(queueConfigDto.getCallbackURL())
+                            .isEqualTo(queue.getCallbackURL());
+                    assertThat(queueConfigDto.getName())
+                            .isEqualTo(queue.getName());
+                    assertThat(queueConfigDto.getAvailableSecondPerUser())
+                            .isEqualTo(queue.getAvailableSecondPerUser());
+                    assertThat(queueConfigDto.getCapacity())
+                            .isEqualTo(queue.getCapacity());
+                    assertThat(queueConfigDto.getMaxActiveUsers())
+                            .isEqualTo(queue.getMaxActiveUsers());
+                })
+                .expectComplete()
+                .verify();
     }
 
     @Test
     void testIncAndGetQueueTail() {
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        Mono<Long> flux = Flux.fromStream(IntStream.range(1, 5001).boxed())
+                .flatMap(i -> queueRepo.incAndGetQueueTail(testQueueId))
+                .reduce(0L, Long::sum);
 
-        for (int i = 0; i < 5000; i++) {
-            executorService.execute(() -> queueRepo.incAndGetQueueTail(testQueueId));
-        }
-        executorService.shutdown();
+        StepVerifier.create(flux)
+                .expectNextCount(1)
+                .expectComplete()
+                .verify();
 
-        Queue queue = queueRepo.getQueue(testQueueId);
-        assertThat(queue.getTail()).isEqualTo(5000);
-    }
-
-    @Test
-    void testGetAllQueues() {
-        Set queues = queueRepo.getAllQueues();
-        for (Object queueId: queues) {
-            System.out.println(queueId);
-        }
+        StepVerifier.create(queueRepo.findQueue(testQueueId))
+                .assertNext(queue -> {
+                    assertThat(queue.getTail()).isEqualTo(5000);
+                })
+                .expectComplete()
+                .verify();
     }
 
     @Test
     void testCloseQueue() {
-        queueRepo.closeQueue(testQueueId);
-        Queue queue = queueRepo.getQueue(testQueueId);
-        assertThat(queue).isNull();
+        StepVerifier.create(queueRepo.findQueue(testQueueId))
+                .expectNextCount(1)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.closeQueue(testQueueId))
+                .expectNext(Boolean.TRUE)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.findQueue(testQueueId))
+                .expectNextCount(0)
+                .expectComplete()
+                .verify();
     }
 
+    @Test
+    void testGetQueueLock() {
+        StepVerifier.create(queueRepo.getQueueLock(testQueueId, 5))
+                .expectNext(Boolean.TRUE)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.getQueueLock(testQueueId, 5))
+                .expectNext(Boolean.FALSE)
+                .expectComplete()
+                .verify();
+
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        StepVerifier.create(queueRepo.getQueueLock(testQueueId, 5))
+                .expectNext(Boolean.TRUE)
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void testIncQueueHead() {
+        StepVerifier.create(queueRepo.incQueueHead(testQueueId, 100))
+                .expectNext(100L)
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.findQueue(testQueueId))
+                .assertNext(queue -> {
+                    assertThat(queue.getHead() == 100);
+                }).expectComplete()
+                .verify();
+    }
+    
     void cleanup() {
-        Set<String> keys = redisTemplate.keys("*");
-        redisTemplate.delete(keys);
+        reactiveRedisTemplate
+                .keys("*")
+                .flatMap(key -> reactiveRedisTemplate.delete(key))
+                .blockLast();
     }
 
 }

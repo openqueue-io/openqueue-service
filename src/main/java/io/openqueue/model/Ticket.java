@@ -19,7 +19,7 @@ public class Ticket {
     private String authCode;
     private long issueTime;
     @Builder.Default
-    private long activateTime = 0;
+    private long activateTime = 0L;
     @Builder.Default
     private boolean occupied = false;
     @Builder.Default

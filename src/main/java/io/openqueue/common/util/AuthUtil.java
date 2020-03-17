@@ -14,7 +14,7 @@ public class AuthUtil {
         return new String(decoder.decode(base64), StandardCharsets.UTF_8);
     }
 
-    public static boolean ticketTokenValidate(String ticketToken) {
+    public static boolean validateTicketToken(String ticketToken) {
         return ticketToken.matches("t:q:[a-zA-Z0-9]+:[1-9][0-9]{0,8}:[a-zA-Z0-9]+");
     }
 

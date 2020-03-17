@@ -5,16 +5,15 @@ import com.alibaba.fastjson.JSONObject;
 import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.model.Queue;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.lang.Nullable;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.io.Serializable;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 import static io.openqueue.common.constant.Keys.*;
 
@@ -25,63 +24,61 @@ import static io.openqueue.common.constant.Keys.*;
 public class QueueRepo {
 
     @Autowired
-    private RedisTemplate<String, Serializable> redisTemplate;
+    private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
-    public void setupQueue(Queue queue) {
-        JSONObject jsonObject = (JSONObject) JSON.toJSON(queue);
-        redisTemplate.opsForHash().putAll(queue.getId(), jsonObject);
-        redisTemplate.opsForSet().add(ALL_QUEUES_SET, queue.getId());
+    public Mono<Boolean> setupQueue(Queue queue) {
+        Map<String, Object> attrMap = (JSONObject) JSON.toJSON(queue);
+        return reactiveRedisTemplate.opsForHash().putAll(queue.getId(), attrMap)
+                .filter(success -> success)
+                .flatMap(success -> reactiveRedisTemplate.opsForSet().add(ALL_QUEUES_SET, queue.getId()))
+                .filter(count -> count > 0)
+                .flatMap(count -> Mono.just(Boolean.TRUE))
+                .defaultIfEmpty(Boolean.FALSE);
     }
 
-    @Nullable
-    public Queue getQueue(String queueId) {
-        Map queueMap = redisTemplate.opsForHash().entries(queueId);
-        if(queueMap.size() == 0) {
-            return null;
-        }
-        JSON queueJson = (JSON) JSON.toJSON(queueMap);
-        return queueJson.toJavaObject(Queue.class);
+    public Mono<Queue> findQueue(String queueId) {
+        Flux<Map.Entry<Object, Object>> queueMap = reactiveRedisTemplate.opsForHash().entries(queueId);
+        return queueMap
+                .reduce(new HashMap<>(), (map, entry) -> {
+                    map.put(entry.getKey(), entry.getValue());
+                    return map;
+                })
+                .flatMap(map -> {
+                    if (map.isEmpty()) {
+                        return Mono.empty();
+                    } else {
+                        JSON map2Json = (JSON) JSON.toJSON(map);
+                        Queue queue = map2Json.toJavaObject(Queue.class);
+                        return Mono.just(queue);
+                    }
+                });
     }
 
-    public Set getAllQueues() {
-        return redisTemplate.opsForSet().members(ALL_QUEUES_SET);
+    public Flux<String> findAllQueues() {
+        return reactiveRedisTemplate.opsForSet().members(ALL_QUEUES_SET).cast(String.class);
     }
 
-    public boolean getQueueLock(String queueId, int timeout) {
-        return redisTemplate.opsForValue().setIfAbsent(LOCK_PREFIX + queueId, "Locked", Duration.ofSeconds(timeout));
+    public Mono<Boolean> getQueueLock(String queueId, int timeout) {
+        return reactiveRedisTemplate.opsForValue().setIfAbsent(LOCK_PREFIX + queueId, "Locked", Duration.ofSeconds(timeout));
     }
 
-    public int incAndGetQueueTail(String queueId) {
-        return redisTemplate.opsForHash().increment(queueId, "tail", 1).intValue();
+    public Mono<Long> incAndGetQueueTail(String queueId) {
+        return reactiveRedisTemplate.opsForHash().increment(queueId, "tail", 1);
     }
 
-    public void incQueueHead(String queueId, int increment) {
-        redisTemplate.opsForHash().increment(queueId, "head", increment);
+    public Mono<Long> incQueueHead(String queueId, int increment) {
+        return reactiveRedisTemplate.opsForHash().increment(queueId, "head", increment);
     }
 
-    public void removeExpiredTickets(String setKey, long timeout) {
-        redisTemplate.opsForZSet().removeRangeByScore(setKey, 0, timeout);
-    }
-
-    public int getTicketNumInSet(String setKey) {
-        return redisTemplate.opsForZSet().size(setKey).intValue();
-    }
-
-    public void addTicketToSet(String setKey, String ticketPrefix, int start, int increment, int timeout) {
-        for(int i = 1; i <= increment; ++i) {
-            redisTemplate.opsForZSet().add(setKey,
-                    ticketPrefix + ":" + (start + i),
-                    Instant.now().getEpochSecond() + timeout);
-        }
-    }
-
-    public void updateQueueConfig(String queueId, QueueConfigDto queueConfigDto) {
+    public Mono<Boolean> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto) {
         JSONObject jsonObject = (JSONObject) JSON.toJSON(queueConfigDto);
-        redisTemplate.opsForHash().putAll(queueId, jsonObject);
+        return reactiveRedisTemplate.opsForHash().putAll(queueId, jsonObject);
     }
 
-    public void closeQueue(String queueId) {
-        redisTemplate.delete(queueId);
-        redisTemplate.opsForSet().remove(ALL_QUEUES_SET, queueId);
+    public Mono<Boolean> closeQueue(String queueId) {
+        return reactiveRedisTemplate.delete(queueId)
+                .concatWith(reactiveRedisTemplate.opsForSet().remove(ALL_QUEUES_SET, queueId))
+                .reduce(0L, Long::sum)
+                .flatMap(count -> Mono.just(count == 2));
     }
 }
