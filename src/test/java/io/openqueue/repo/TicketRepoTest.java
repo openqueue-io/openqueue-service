@@ -51,30 +51,30 @@ class TicketRepoTest {
     void testCreateFindAndRevokeTicket() {
 
         // Make sure no that ticket at first.
-        StepVerifier.create(ticketRepo.findTicket(testTicketId))
+        StepVerifier.create(ticketRepo.findById(testTicketId))
                 .expectComplete()
                 .verify();
 
         // Create a new ticket.
-        StepVerifier.create(ticketRepo.createTicket(ticket))
+        StepVerifier.create(ticketRepo.create(ticket))
                 .expectNext(ticket)
                 .expectComplete()
                 .verify();
 
         // Expect the ticket has been created.
-        StepVerifier.create(ticketRepo.findTicket(testTicketId))
+        StepVerifier.create(ticketRepo.findById(testTicketId))
                 .expectNext(ticket)
                 .expectComplete()
                 .verify();
 
         // Delete this ticket.
-        StepVerifier.create(ticketRepo.revokeTicket(testTicketId))
+        StepVerifier.create(ticketRepo.revoke(testTicketId))
                 .expectNext(1L)
                 .expectComplete()
                 .verify();
 
         // Expect this ticket has been deleted.
-        StepVerifier.create(ticketRepo.findTicket(testTicketId))
+        StepVerifier.create(ticketRepo.findById(testTicketId))
                 .expectComplete()
                 .verify();
     }
@@ -83,8 +83,8 @@ class TicketRepoTest {
     void testIncTicketUsage() {
         // 1. Create a new ticket.
         // 2. Expect current ticket usage is 0.
-        StepVerifier.create(ticketRepo.createTicket(ticket)
-                .then(ticketRepo.findTicket(testTicketId)))
+        StepVerifier.create(ticketRepo.create(ticket)
+                .then(ticketRepo.findById(testTicketId)))
                 .assertNext(ticket1 -> {
                     assertThat(ticket1.getCountOfUsage() == 0);
                 })
@@ -92,13 +92,13 @@ class TicketRepoTest {
                 .verify();
 
         // Increase ticket usage.
-        StepVerifier.create(ticketRepo.incTicketUsage(testTicketId))
+        StepVerifier.create(ticketRepo.incUsage(testTicketId))
                 .expectNext(1L)
                 .expectComplete()
                 .verify();
 
         // Make sure current ticket usage is 1.
-        StepVerifier.create(ticketRepo.findTicket(testTicketId))
+        StepVerifier.create(ticketRepo.findById(testTicketId))
                 .assertNext(ticket1 -> {
                     assertThat(ticket1.getCountOfUsage() == 1);
                 })
@@ -110,8 +110,8 @@ class TicketRepoTest {
     void testSetTicketActivateTime() {
         // 1. Create a new ticket.
         // 2. Expect current ticket active time is default value 0.
-        StepVerifier.create(ticketRepo.createTicket(ticket)
-                .then(ticketRepo.findTicket(testTicketId)))
+        StepVerifier.create(ticketRepo.create(ticket)
+                .then(ticketRepo.findById(testTicketId)))
                 .assertNext(ticket1 -> {
                     assertThat(ticket1.getActivateTime() == 0L);
                 })
@@ -121,8 +121,8 @@ class TicketRepoTest {
         long currentTime = Instant.now().getEpochSecond();
         // 1. Set ticket activate time.
         // 2. Expect current ticket activate time is {currentTime}.
-        StepVerifier.create(ticketRepo.setTicketActivateTime(testTicketId, currentTime)
-                .then(ticketRepo.findTicket(testTicketId)))
+        StepVerifier.create(ticketRepo.setActivateTime(testTicketId, currentTime)
+                .then(ticketRepo.findById(testTicketId)))
                 .assertNext(ticket1 -> {
                     assertThat(ticket1.getActivateTime() == currentTime);
                 })
@@ -134,7 +134,7 @@ class TicketRepoTest {
     void testSetTicketOccupied() {
         // 1. Create a new ticket.
         // 2. Expect current ticket is not occupied.
-        StepVerifier.create(ticketRepo.createTicket(ticket).then(ticketRepo.findTicket(testTicketId)))
+        StepVerifier.create(ticketRepo.create(ticket).then(ticketRepo.findById(testTicketId)))
                 .assertNext(ticket1 -> {
                     assertThat(!ticket1.isOccupied());
                 })
@@ -143,7 +143,7 @@ class TicketRepoTest {
 
         // 1. Set ticket occupied.
         // 2. Expect current ticket is now occupied.
-        StepVerifier.create(ticketRepo.setTicketOccupied(testTicketId).then(ticketRepo.findTicket(testTicketId)))
+        StepVerifier.create(ticketRepo.setOccupied(testTicketId).then(ticketRepo.findById(testTicketId)))
                 .assertNext(ticket1 -> {
                     assertThat(ticket1.isOccupied());
                 })
@@ -163,8 +163,7 @@ class TicketRepoTest {
 
         // Add ticket to set.
         long currentTime = Instant.now().getEpochSecond();
-        StepVerifier.create(ticketRepo.addTicketToSet(setKey, testTicketId, currentTime + 10))
-                .expectNext(Boolean.TRUE)
+        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime + 10))
                 .expectComplete()
                 .verify();
 
@@ -182,14 +181,14 @@ class TicketRepoTest {
         // 1. Add ticket to set.
         // 2. Make sure ticket in set at first.
         long currentTime = Instant.now().getEpochSecond();
-        StepVerifier.create(ticketRepo.addTicketToSet(setKey, testTicketId, currentTime + 10)
+        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime + 10)
                 .then(ticketRepo.isTicketInSet(setKey, testTicketId)))
                 .expectNext(Boolean.TRUE)
                 .expectComplete()
                 .verify();
 
         // Remove ticket by id
-        StepVerifier.create(ticketRepo.removeTicketOutOfSetById(setKey, testTicketId))
+        StepVerifier.create(ticketRepo.removeOutOfSetById(setKey, testTicketId))
                 .expectNext(1L)
                 .expectComplete()
                 .verify();
@@ -208,14 +207,14 @@ class TicketRepoTest {
         // 1. Add ticket to set.
         // 2. Make sure ticket in set at first.
         long currentTime = Instant.now().getEpochSecond();
-        StepVerifier.create(ticketRepo.addTicketToSet(setKey, testTicketId, currentTime)
+        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime)
                 .then(ticketRepo.isTicketInSet(setKey, testTicketId)))
                 .expectNext(Boolean.TRUE)
                 .expectComplete()
                 .verify();
 
         // Remove ticket by early time
-        StepVerifier.create(ticketRepo.removeTicketOutOfSetByTime(setKey, currentTime - 1))
+        StepVerifier.create(ticketRepo.removeOutOfSetByTime(setKey, currentTime - 1))
                 .expectNext(0L)
                 .expectComplete()
                 .verify();
@@ -227,7 +226,7 @@ class TicketRepoTest {
                 .verify();
 
         // Remove ticket by post time
-        StepVerifier.create(ticketRepo.removeTicketOutOfSetByTime(setKey, currentTime + 1))
+        StepVerifier.create(ticketRepo.removeOutOfSetByTime(setKey, currentTime + 1))
                 .expectNext(1L)
                 .expectComplete()
                 .verify();
@@ -256,7 +255,7 @@ class TicketRepoTest {
                         .boxed()
                         .map(index -> "ticket:test:" + index)
         )
-                .flatMap(ticket -> ticketRepo.addTicketToSet(setKey, ticket, new Random().nextInt()))
+                .flatMap(ticket -> ticketRepo.addToSet(setKey, ticket, new Random().nextInt()))
                 .count()
                 .block();
 

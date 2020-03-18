@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Mono;
 
 /**
  * @author chenjing
@@ -22,31 +23,29 @@ public class QueueController {
     @Autowired
     private QueueService queueService;
 
-    static final Logger logger = LoggerFactory.getLogger(QueueController.class);
-
     @PostMapping(value = "/setup")
-    public ResponseEntity<ResponseBody> setupQueue(@RequestBody QueueConfigDto queueConfigDto){
+    public Mono<ResponseEntity<ResponseBody>> setupQueue(@RequestBody QueueConfigDto queueConfigDto){
         return queueService.setupQueue(queueConfigDto);
     }
 
     @GetMapping(value = "/{queueId}/status")
-    public ResponseEntity<ResponseBody> getQueueStatus(@PathVariable("queueId") String queueId){
+    public Mono<ResponseEntity<ResponseBody>> getQueueStatus(@PathVariable("queueId") String queueId){
         return queueService.getQueueStatus(queueId);
     }
 
     @GetMapping(value = "/{queueId}/config")
-    public ResponseEntity<ResponseBody> getQueueConfig(@PathVariable("queueId") String queueId){
+    public Mono<ResponseEntity<ResponseBody>> getQueueConfig(@PathVariable("queueId") String queueId){
         return queueService.getQueueConfig(queueId);
     }
 
     @PutMapping(value = "/{queueId}/config", consumes="application/json")
-    public ResponseEntity<ResponseBody> updateQueueConfig(@PathVariable("queueId") String queueId,
+    public Mono<ResponseEntity<ResponseBody>> updateQueueConfig(@PathVariable("queueId") String queueId,
                                                     @RequestBody QueueConfigDto queueConfigDto){
         return queueService.updateQueueConfig(queueId, queueConfigDto);
     }
 
     @DeleteMapping(value = "/{queueId}/close")
-    public ResponseEntity<ResponseBody> closeQueue(@PathVariable("queueId") String queueId){
+    public Mono<ResponseEntity<ResponseBody>> closeQueue(@PathVariable("queueId") String queueId){
         return queueService.closeQueue(queueId);
     }
 }

@@ -72,6 +72,16 @@ public enum ResultCode {
     ILLEGAL_TICKET_AUTH_FORMAT_EXCEPTION(40001, "Illegal ticket auth code format."),
 
     /**
+     * Exception when close queue.
+     */
+    CLOSE_QUEUE_FAILED(40002, "Failed to close queue."),
+
+    /**
+     * Queue already exist
+     */
+    QUEUE_ALREADY_EXIST_EXCEPTION(40003, "Queue already exist."),
+
+    /**
      * Mismatch ticket auth code
      */
     MISMATCH_TICKET_AUTH_CODE_EXCEPTION(40101, "Mismatch ticket auth code."),

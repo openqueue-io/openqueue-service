@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 @Builder
 public class QueueConfigDto {
     private String name;
-    @Builder.Default
-    private int capacity = 1000000;
+    private int capacity;
     private int maxActiveUsers;
     private int availableSecondPerUser;
+    private int holdTimeForActivate;
     private String callbackURL;
 }

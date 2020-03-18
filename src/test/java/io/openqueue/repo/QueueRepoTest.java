@@ -1,7 +1,6 @@
 package io.openqueue.repo;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
+import io.openqueue.common.util.TypeConverter;
 import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.model.Queue;
 import org.junit.jupiter.api.AfterEach;
@@ -16,7 +15,6 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.io.Serializable;
-import java.util.Map;
 import java.util.stream.IntStream;
 
 import static io.openqueue.common.constant.Keys.ALL_QUEUES_SET;
@@ -37,22 +35,21 @@ class QueueRepoTest {
 
     @BeforeAll
     static void runBeforeAllTestMethod() {
+        testQueueId = "q:test";
         queueTest = Queue.builder()
-                .id("q:20sDO3")
+                .id(testQueueId)
                 .availableSecondPerUser(300)
                 .callbackURL("openqueue.io")
                 .capacity(100000)
                 .maxActiveUsers(1000)
                 .name("test_queue")
-                .ownerId("admin")
                 .build();
-        testQueueId = "q:20sDO3";
+
     }
 
     @BeforeEach
     void runBeforeEachTestMethod() {
-        Map<String, Object> attrMap = (JSONObject) JSON.toJSON(queueTest);
-        reactiveRedisTemplate.opsForHash().putAll(testQueueId, attrMap)
+        reactiveRedisTemplate.opsForHash().putAll(testQueueId, TypeConverter.pojo2Map(queueTest))
                 .then(reactiveRedisTemplate.opsForSet().add(ALL_QUEUES_SET, testQueueId))
                 .block();
     }
@@ -63,20 +60,32 @@ class QueueRepoTest {
     }
 
     @Test
-    void testSetupQueue() {
+    void testCreateQueue() {
         cleanup();
 
-        StepVerifier.create(queueRepo.setupQueue(queueTest))
-                .expectNext(Boolean.TRUE)
-                .expectComplete()
-                .verify();
+        StepVerifier.create(queueRepo.createOrUpdate(queueTest))
+                .expectNext(queueTest)
+                .verifyComplete();
 
-        StepVerifier.create(queueRepo.findQueue(testQueueId))
+        StepVerifier.create(queueRepo.findById(testQueueId))
                 .expectNext(queueTest)
                 .expectComplete()
                 .verify();
 
-        StepVerifier.create(queueRepo.findAllQueues())
+        StepVerifier.create(queueRepo.findAllId())
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void testAddToSet() {
+        cleanup();
+
+        StepVerifier.create(queueRepo.findAllId())
+                .expectComplete()
+                .verify();
+
+        StepVerifier.create(queueRepo.addToSet(testQueueId).then(queueRepo.findAllId().last()))
                 .expectNext(testQueueId)
                 .expectComplete()
                 .verify();
@@ -90,14 +99,17 @@ class QueueRepoTest {
                 .maxActiveUsers(3000)
                 .capacity(100000)
                 .callbackURL("openqueue.io")
+                .holdTimeForActivate(200)
                 .build();
 
-        StepVerifier.create(queueRepo.updateQueueConfig(testQueueId, queueConfigDto))
-                .expectNext(Boolean.TRUE)
-                .expectComplete()
-                .verify();
+        Queue newQueue = TypeConverter.cast(queueConfigDto, Queue.class);
+        newQueue.setId(testQueueId);
 
-        StepVerifier.create(queueRepo.findQueue(testQueueId))
+        StepVerifier.create(queueRepo.createOrUpdate(newQueue))
+                .expectNext(newQueue)
+                .verifyComplete();
+
+        StepVerifier.create(queueRepo.findById(testQueueId))
                 .assertNext(queue -> {
                     assertThat(queueConfigDto.getCallbackURL())
                             .isEqualTo(queue.getCallbackURL());
@@ -109,6 +121,8 @@ class QueueRepoTest {
                             .isEqualTo(queue.getCapacity());
                     assertThat(queueConfigDto.getMaxActiveUsers())
                             .isEqualTo(queue.getMaxActiveUsers());
+                    assertThat(queueConfigDto.getHoldTimeForActivate())
+                            .isEqualTo(queue.getHoldTimeForActivate());
                 })
                 .expectComplete()
                 .verify();
@@ -117,7 +131,7 @@ class QueueRepoTest {
     @Test
     void testIncAndGetQueueTail() {
         Mono<Long> flux = Flux.fromStream(IntStream.range(1, 5001).boxed())
-                .flatMap(i -> queueRepo.incAndGetQueueTail(testQueueId))
+                .flatMap(i -> queueRepo.incAndGetTail(testQueueId))
                 .reduce(0L, Long::sum);
 
         StepVerifier.create(flux)
@@ -125,7 +139,7 @@ class QueueRepoTest {
                 .expectComplete()
                 .verify();
 
-        StepVerifier.create(queueRepo.findQueue(testQueueId))
+        StepVerifier.create(queueRepo.findById(testQueueId))
                 .assertNext(queue -> {
                     assertThat(queue.getTail()).isEqualTo(5000);
                 })
@@ -135,17 +149,17 @@ class QueueRepoTest {
 
     @Test
     void testCloseQueue() {
-        StepVerifier.create(queueRepo.findQueue(testQueueId))
+        StepVerifier.create(queueRepo.findById(testQueueId))
                 .expectNextCount(1)
                 .expectComplete()
                 .verify();
 
-        StepVerifier.create(queueRepo.closeQueue(testQueueId))
+        StepVerifier.create(queueRepo.close(testQueueId))
                 .expectNext(Boolean.TRUE)
                 .expectComplete()
                 .verify();
 
-        StepVerifier.create(queueRepo.findQueue(testQueueId))
+        StepVerifier.create(queueRepo.findById(testQueueId))
                 .expectNextCount(0)
                 .expectComplete()
                 .verify();
@@ -164,7 +178,7 @@ class QueueRepoTest {
                 .verify();
 
         try {
-            Thread.sleep(5000);
+            Thread.sleep(6000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -177,18 +191,18 @@ class QueueRepoTest {
 
     @Test
     void testIncQueueHead() {
-        StepVerifier.create(queueRepo.incQueueHead(testQueueId, 100))
+        StepVerifier.create(queueRepo.incHead(testQueueId, 100))
                 .expectNext(100L)
                 .expectComplete()
                 .verify();
 
-        StepVerifier.create(queueRepo.findQueue(testQueueId))
+        StepVerifier.create(queueRepo.findById(testQueueId))
                 .assertNext(queue -> {
                     assertThat(queue.getHead() == 100);
                 }).expectComplete()
                 .verify();
     }
-    
+
     void cleanup() {
         reactiveRedisTemplate
                 .keys("*")

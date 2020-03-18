@@ -1,8 +1,7 @@
 package io.openqueue.repo;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
-import io.openqueue.dto.QueueConfigDto;
+import io.openqueue.common.util.TypeConverter;
 import io.openqueue.model.Queue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
@@ -26,19 +25,16 @@ public class QueueRepo {
     @Autowired
     private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
-    public Mono<Boolean> setupQueue(Queue queue) {
-        Map<String, Object> attrMap = (JSONObject) JSON.toJSON(queue);
-        return reactiveRedisTemplate.opsForHash().putAll(queue.getId(), attrMap)
-                .filter(success -> success)
-                .flatMap(success -> reactiveRedisTemplate.opsForSet().add(ALL_QUEUES_SET, queue.getId()))
-                .filter(count -> count > 0)
-                .flatMap(count -> Mono.just(Boolean.TRUE))
-                .defaultIfEmpty(Boolean.FALSE);
+    public Mono<Queue> createOrUpdate(Queue queue) {
+        return reactiveRedisTemplate.opsForHash().putAll(queue.getId(), TypeConverter.pojo2Map(queue)).thenReturn(queue);
     }
 
-    public Mono<Queue> findQueue(String queueId) {
-        Flux<Map.Entry<Object, Object>> queueMap = reactiveRedisTemplate.opsForHash().entries(queueId);
-        return queueMap
+    public Mono<Void> addToSet(String queueId) {
+        return reactiveRedisTemplate.opsForSet().add(ALL_QUEUES_SET, queueId).then();
+    }
+
+    public Mono<Queue> findById(String queueId) {
+        return reactiveRedisTemplate.opsForHash().entries(queueId)
                 .reduce(new HashMap<>(), (map, entry) -> {
                     map.put(entry.getKey(), entry.getValue());
                     return map;
@@ -47,14 +43,13 @@ public class QueueRepo {
                     if (map.isEmpty()) {
                         return Mono.empty();
                     } else {
-                        JSON map2Json = (JSON) JSON.toJSON(map);
-                        Queue queue = map2Json.toJavaObject(Queue.class);
+                        Queue queue = TypeConverter.map2Pojo(map, Queue.class);
                         return Mono.just(queue);
                     }
                 });
     }
 
-    public Flux<String> findAllQueues() {
+    public Flux<String> findAllId() {
         return reactiveRedisTemplate.opsForSet().members(ALL_QUEUES_SET).cast(String.class);
     }
 
@@ -62,20 +57,15 @@ public class QueueRepo {
         return reactiveRedisTemplate.opsForValue().setIfAbsent(LOCK_PREFIX + queueId, "Locked", Duration.ofSeconds(timeout));
     }
 
-    public Mono<Long> incAndGetQueueTail(String queueId) {
+    public Mono<Long> incAndGetTail(String queueId) {
         return reactiveRedisTemplate.opsForHash().increment(queueId, "tail", 1);
     }
 
-    public Mono<Long> incQueueHead(String queueId, int increment) {
+    public Mono<Long> incHead(String queueId, int increment) {
         return reactiveRedisTemplate.opsForHash().increment(queueId, "head", increment);
     }
 
-    public Mono<Boolean> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto) {
-        JSONObject jsonObject = (JSONObject) JSON.toJSON(queueConfigDto);
-        return reactiveRedisTemplate.opsForHash().putAll(queueId, jsonObject);
-    }
-
-    public Mono<Boolean> closeQueue(String queueId) {
+    public Mono<Boolean> close(String queueId) {
         return reactiveRedisTemplate.delete(queueId)
                 .concatWith(reactiveRedisTemplate.opsForSet().remove(ALL_QUEUES_SET, queueId))
                 .reduce(0L, Long::sum)

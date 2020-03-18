@@ -2,6 +2,7 @@ package io.openqueue.repo;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import io.openqueue.common.util.TypeConverter;
 import io.openqueue.model.Ticket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Range;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,13 +25,11 @@ public class TicketRepo {
     @Autowired
     private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
-    public Mono<Ticket> createTicket(Ticket ticket){
-        Map<String, Object> attrMap = (JSONObject) JSON.toJSON(ticket);
-        return reactiveRedisTemplate.opsForHash().putAll(ticket.getId(), attrMap)
-                .thenReturn(ticket);
+    public Mono<Ticket> create(Ticket ticket){
+        return reactiveRedisTemplate.opsForHash().putAll(ticket.getId(), TypeConverter.pojo2Map(ticket)).thenReturn(ticket);
     }
 
-    public Mono<Ticket> findTicket(String ticketId){
+    public Mono<Ticket> findById(String ticketId){
         Flux<Map.Entry<Object, Object>> ticketMap = reactiveRedisTemplate.opsForHash().entries(ticketId);
         return ticketMap
                 .reduce(new HashMap<>(), (map, entry) -> {
@@ -47,16 +47,16 @@ public class TicketRepo {
                 });
     }
 
-    public Mono<Long> incTicketUsage(String ticketId) {
+    public Mono<Long> incUsage(String ticketId) {
         return reactiveRedisTemplate.opsForHash().increment(ticketId, "countOfUsage", 1);
     }
 
-    public Mono<Boolean> setTicketActivateTime(String ticketId, long currentTime) {
-        return reactiveRedisTemplate.opsForHash().put(ticketId, "activateTime", currentTime);
+    public Mono<Void> setActivateTime(String ticketId, long currentTime) {
+        return reactiveRedisTemplate.opsForHash().put(ticketId, "activateTime", currentTime).then();
     }
 
-    public Mono<Boolean> setTicketOccupied(String ticketId){
-        return reactiveRedisTemplate.opsForHash().put(ticketId, "occupied", Boolean.TRUE);
+    public Mono<Void> setOccupied(String ticketId){
+        return reactiveRedisTemplate.opsForHash().put(ticketId, "occupied", Boolean.TRUE).then();
     }
 
     public Mono<Boolean> isTicketInSet(String setKey, String ticketId){
@@ -65,15 +65,15 @@ public class TicketRepo {
                 .hasElement();
     }
 
-    public Mono<Boolean> addTicketToSet(String setKey, String ticketId, long expirationTime){
-        return reactiveRedisTemplate.opsForZSet().add(setKey, ticketId, expirationTime);
+    public Mono<Void> addToSet(String setKey, String ticketId, long expirationTime){
+        return reactiveRedisTemplate.opsForZSet().add(setKey, ticketId, expirationTime).then();
     }
 
-    public Mono<Long> removeTicketOutOfSetById(String setKey, String ticketId){
+    public Mono<Long> removeOutOfSetById(String setKey, String ticketId){
         return reactiveRedisTemplate.opsForZSet().remove(setKey, ticketId);
     }
 
-    public Mono<Long> removeTicketOutOfSetByTime(String setKey, long expirationTime) {
+    public Mono<Long> removeOutOfSetByTime(String setKey, long expirationTime) {
         return reactiveRedisTemplate.opsForZSet().removeRangeByScore(setKey, Range.closed((double) 0, (double) expirationTime));
     }
 
@@ -81,7 +81,7 @@ public class TicketRepo {
         return reactiveRedisTemplate.opsForZSet().size(setKey);
     }
 
-    public Mono<Long> revokeTicket(String ticketId){
+    public Mono<Long> revoke(String ticketId){
         return reactiveRedisTemplate.delete(ticketId);
     }
 

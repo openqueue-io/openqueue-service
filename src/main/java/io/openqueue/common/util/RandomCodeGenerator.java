@@ -13,6 +13,10 @@ public class RandomCodeGenerator {
             'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
             'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
 
+    public static String getQueueId() {
+        return "q:" + getCode();
+    }
+
     public static String getCode() {
         long hash = UUID.randomUUID().hashCode();
         long num = hash < 0 ? ((long) 2 * 0x7fffffff) + hash + 2 : hash;
