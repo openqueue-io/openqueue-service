@@ -1,6 +1,5 @@
 package io.openqueue.task;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.openqueue.model.Queue;
 import io.openqueue.repo.QueueRepo;
 import org.slf4j.Logger;
@@ -25,7 +24,6 @@ public class ScheduledQueueTask {
     @Autowired
     private QueueRepo queueRepo;
 
-    private static final Logger logger = LoggerFactory.getLogger(ScheduledQueueTask.class);
     private static final int LOCK_TIME_FOR_EACH_QUEUE = 3;
 
     @Scheduled(fixedRate = 5000)

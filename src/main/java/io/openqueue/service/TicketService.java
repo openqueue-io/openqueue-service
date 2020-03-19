@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
 import java.time.Instant;
+import java.util.Objects;
 
 import static io.openqueue.common.constant.Keys.ACTIVE_SET_PREFIX;
 import static io.openqueue.common.constant.Keys.READY_SET_PREFIX;
@@ -129,11 +130,11 @@ public class TicketService {
 
         Boolean active = ticketRepo.isTicketInSet(queueActiveSetKey, ticketAuthDto.getToken()).block();
 
-        if (!active) {
+        if (!Objects.requireNonNull(active)) {
             String queueReadySetKey = READY_SET_PREFIX + ticketAuthDto.getQueueId();
             Boolean ready = ticketRepo.isTicketInSet(queueReadySetKey, ticketAuthDto.getTicketId()).block();
 
-            if (!ready) {
+            if (!Objects.requireNonNull(ready)) {
                 throw new TicketServiceException(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
             }
 

@@ -1,6 +1,5 @@
 package io.openqueue.repo;
 
-import com.alibaba.fastjson.JSON;
 import io.openqueue.common.util.TypeConverter;
 import io.openqueue.model.Queue;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +11,6 @@ import reactor.core.publisher.Mono;
 import java.io.Serializable;
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.Map;
 
 import static io.openqueue.common.constant.Keys.*;
 

@@ -1,28 +1,30 @@
 package io.openqueue.controller;
 
-import com.alibaba.fastjson.JSON;
 import io.openqueue.dto.TicketAuthDto;
 import io.openqueue.dto.TicketStateDto;
 import io.openqueue.service.TicketService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.web.reactive.function.BodyInserters;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 import static org.mockito.Mockito.verify;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@RunWith(SpringRunner.class)
+@WebFluxTest(controllers = TicketController.class)
 class TicketControllerTest {
+
     @Autowired
-    private MockMvc mockMvc;
+    private WebTestClient webTestClient;
 
     @MockBean
     private TicketService ticketService;
@@ -48,16 +50,10 @@ class TicketControllerTest {
     }
 
     @Test
-    void test() {
-        String token = Base64.getUrlEncoder().encodeToString("t:q:3nHFKz:30:pWtrL".getBytes());
-        System.out.println(token);
-    }
-
-    @Test
     void testApplyTicket() throws Exception {
-        mockMvc.perform(
-                post("/v1/ticket/apply?qid=1234"))
-                .andReturn();
+        webTestClient.post()
+                .uri("/v1/ticket/apply?qid=1234")
+                .exchange();
 
         verify(ticketService).applyTicket("q:1234");
     }
@@ -65,20 +61,22 @@ class TicketControllerTest {
     @Test
     void testGetTicketUsage() throws Exception {
         String reqUrl = "/v1/ticket/stat?ticket=" + token;
-        System.out.println(reqUrl);
-        mockMvc.perform(
-                get(reqUrl))
-                .andReturn();
+
+        webTestClient.get()
+                .uri(reqUrl)
+                .exchange();
+
         verify(ticketService).getTicketUsageStat(ticketAuthDto);
     }
 
     @Test
     void testGetTicketAuthorization() throws Exception {
         String reqUrl = "/v1/ticket/authorization?qid=1234&ticket=" + token;
-        System.out.println(reqUrl);
-        mockMvc.perform(
-                get(reqUrl))
-                .andReturn();
+
+        webTestClient.get()
+                .uri(reqUrl)
+                .exchange();
+
         verify(ticketService).getTicketAuthorization(ticketAuthDto, "q:1234");
     }
 
@@ -92,9 +90,11 @@ class TicketControllerTest {
                 .ticketToken(token)
                 .build();
 
-        mockMvc.perform(
-                put(reqUrl).contentType("application/json").content(JSON.toJSONString(ticketStateDto)))
-                .andReturn();
+        webTestClient.put()
+                .uri(reqUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(ticketStateDto))
+                .exchange();
 
         verify(ticketService).setTicketOccupied(ticketAuthDto);
     }
@@ -109,9 +109,12 @@ class TicketControllerTest {
                 .ticketToken(token)
                 .build();
 
-        mockMvc.perform(
-                put(reqUrl).contentType("application/json").content(JSON.toJSONString(ticketStateDto)))
-                .andReturn();
+        webTestClient.put()
+                .uri(reqUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(ticketStateDto))
+                .exchange();
+
         verify(ticketService).activateTicket(ticketAuthDto);
     }
 
@@ -125,9 +128,12 @@ class TicketControllerTest {
                 .ticketToken(token)
                 .build();
 
-        mockMvc.perform(
-                put(reqUrl).contentType("application/json").content(JSON.toJSONString(ticketStateDto)))
-                .andReturn();
+        webTestClient.put()
+                .uri(reqUrl)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(ticketStateDto))
+                .exchange();
+
         verify(ticketService).revokeTicket(ticketAuthDto);
     }
 }
