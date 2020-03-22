@@ -82,6 +82,11 @@ public enum ResultCode {
     QUEUE_ALREADY_EXIST_EXCEPTION(40003, "Queue already exist."),
 
     /**
+     * Queue already exist
+     */
+    TICKET_ALREADY_ACTIVATED_EXCEPTION(40004, "Ticket already activated."),
+
+    /**
      * Mismatch ticket auth code
      */
     MISMATCH_TICKET_AUTH_CODE_EXCEPTION(40101, "Mismatch ticket auth code."),

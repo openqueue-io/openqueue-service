@@ -9,16 +9,13 @@ import io.openqueue.dto.QueueSetupDto;
 import io.openqueue.dto.QueueStatusDto;
 import io.openqueue.model.Queue;
 import io.openqueue.repo.QueueRepo;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author chenjing
@@ -30,38 +27,41 @@ public class QueueService {
     private QueueRepo queueRepo;
 
     public Mono<ResponseEntity<ResponseBody>> setupQueue(QueueConfigDto queueConfigDto) {
-
-        Set<String> allQueueIds = queueRepo.findAllId()
-                .reduce(new HashSet<String>(), (set, id) -> {
-                    set.add(id);
-                    return set;
-                })
-                .defaultIfEmpty(new HashSet<>())
-                .block();
-
-        String qid = "";
-        while (Strings.isBlank(qid)) {
-            String newId = RandomCodeGenerator.getQueueId();
-            if (!Objects.requireNonNull(allQueueIds).contains(newId)) {
-                qid = newId;
-            }
-        }
-
         Queue queue = TypeConverter.cast(queueConfigDto, Queue.class);
-        queue.setId(qid);
 
         QueueSetupDto queueSetupDto = QueueSetupDto.builder()
-                .queueId(qid)
-                .queueUrl("webapp.openqueue.cloud/q/" + qid.split(":")[1])
                 .callbackFormat(queueConfigDto.getCallbackURL() + "?opqticket=xxxxxx")
                 .build();
 
         ResponseBody responseBody = new ResponseBody(ResultCode.SETUP_QUEUE_SUCCESS, queueSetupDto);
 
-        return queueRepo.createOrUpdate(queue)
-                .then(queueRepo.addToSet(qid))
+        return getQueueId()
+                .flatMap(qid -> {
+                    queue.setId(qid);
+                    queueSetupDto.setQueueId(qid);
+                    queueSetupDto.setQueueUrl("webapp.openqueue.cloud/q/" + qid.split(":")[1]);
+                    return queueRepo.createOrUpdate(queue);
+                })
+                .flatMap(newQueue -> queueRepo.addToSet(newQueue.getId()))
                 .thenReturn(ResponseEntity.status(HttpStatus.CREATED).body(responseBody));
 
+    }
+
+    private Mono<String> getQueueId() {
+        String qid = RandomCodeGenerator.getQueueId();
+
+        return queueRepo.findAllId()
+                .reduce(new HashSet<String>(), (set, id) -> {
+                    set.add(id);
+                    return set;
+                })
+                .defaultIfEmpty(new HashSet<>())
+                .flatMap(allQueues -> {
+                    if (allQueues.contains(qid)) {
+                        return getQueueId();
+                    }
+                    return Mono.just(qid);
+                });
     }
 
     public Mono<ResponseEntity<ResponseBody>> getQueueStatus(String queueId) {

@@ -2,17 +2,18 @@ package io.openqueue.task;
 
 import io.openqueue.model.Queue;
 import io.openqueue.repo.QueueRepo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.openqueue.repo.TicketRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.io.Serializable;
 import java.time.Instant;
-import java.util.Set;
-import java.util.concurrent.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.IntStream;
 
 import static io.openqueue.common.constant.Keys.*;
 
@@ -20,54 +21,67 @@ import static io.openqueue.common.constant.Keys.*;
  * @author chenjing
  */
 @Component
+@Slf4j
 public class ScheduledQueueTask {
     @Autowired
     private QueueRepo queueRepo;
 
+    @Autowired
+    private TicketRepo ticketRepo;
+
     private static final int LOCK_TIME_FOR_EACH_QUEUE = 3;
 
     @Scheduled(fixedRate = 5000)
-    public void pushAllQueues() {
-//        Set queues = queueRepo.getAllQueues();
-//        logger.info(String.format("Pushing queues...Total queues:%d", queues.size()));
-//
-//        ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("push-queue-%d").build();
-//        ExecutorService executorService =
-//                new ThreadPoolExecutor(10, 10, 0L, TimeUnit.MILLISECONDS,
-//                        new LinkedBlockingQueue<Runnable>(), threadFactory, new ThreadPoolExecutor.AbortPolicy());
-//
-//        for (Object queueId: queues) {
-//            if (queueRepo.getQueueLock(queueId.toString(), LOCK_TIME_FOR_EACH_QUEUE)) {
-//                executorService.execute(() -> pushQueue(queueId.toString()));
-//            }
-//        }
-//        executorService.shutdown();
+    public void pushAllQueuesForward() {
+        queueRepo.findAllId()
+                .flatMap(this::pushQueueForward)
+                .subscribe();
+        log.info("=======================checking queues and pushing them forward==========================");
     }
 
-    private void pushQueue(String queueId) {
-//        Queue queue = queueRepo.getQueue(queueId);
-//
-//        if(queue.getHead() == queue.getTail()) {
-//            return;
-//        }
-//
-//        // Clean expired user in active set and ready set.
-//        queueRepo.removeExpiredTickets(ACTIVE_SET_PREFIX + queueId, Instant.now().getEpochSecond());
-//        queueRepo.removeExpiredTickets(READY_SET_PREFIX + queueId, Instant.now().getEpochSecond());
-//
-//        // Compute new allowed users.
-//        int readyUsers = queueRepo.getTicketNumInSet(READY_SET_PREFIX + queueId);
-//        int activeUsers = queueRepo.getTicketNumInSet(ACTIVE_SET_PREFIX + queueId);
-//        int newUser = Math.min(queue.getMaxActiveUsers() - activeUsers - readyUsers,
-//                queue.getTail() - queue.getHead());
-//
-//        // Add new users to ready set.
-//        int head = queue.getHead();
-//        queueRepo.addTicketToSet(READY_SET_PREFIX + queueId, TICKET_PREFIX + queueId,
-//                head, newUser, queue.getHoldTimeForActivate());
-//
-//        queueRepo.incQueueHead(queueId, newUser);
-//        logger.info(String.format("Queue:%s | Pushed new users: %d |Current head:%d | Current tail:%d",
-//                queueId, newUser, queue.getHead() + newUser, queue.getTail()));
+    private Mono<Void> pushQueueForward(String queueId) {
+        return queueRepo.getQueueLock(queueId, LOCK_TIME_FOR_EACH_QUEUE)
+                .flatMap(success -> {
+                    if (success) {
+                        return queueRepo.findById(queueId).flatMap(this::doPush);
+                    }
+                    return Mono.empty();
+                });
+
+    }
+
+    private Mono<Void> doPush(Queue queue) {
+        String queueId = queue.getId();
+        Map<String, Long> cache = new HashMap<>();
+
+        // Clean expired user in active set and ready set.
+        Mono<Long> removeExpiredTicket = ticketRepo.removeOutOfSetByTime(ACTIVE_SET_PREFIX + queueId, Instant.now().getEpochSecond())
+                .then(ticketRepo.removeOutOfSetByTime(READY_SET_PREFIX + queueId, Instant.now().getEpochSecond()));
+
+        Mono<Long> countNewUser = removeExpiredTicket.then(ticketRepo.countTicketInSet(READY_SET_PREFIX + queueId))
+                .flatMap(readyUsers -> {
+                    cache.put("readyUsers", readyUsers);
+                    return ticketRepo.countTicketInSet(ACTIVE_SET_PREFIX + queueId);
+                })
+                .flatMap(activeUsers -> Mono.just(Math.min(queue.getMaxActiveUsers() - activeUsers - cache.get("readyUsers"),
+                        queue.getTail() - queue.getHead())));
+
+        // Add new users to ready set.
+        return countNewUser.flatMap(newUser -> {
+            int start = queue.getHead() + 1;
+            return Flux.fromStream(
+                    IntStream.range(start, start + newUser.intValue())
+                            .boxed()
+                            .map(index -> TICKET_PREFIX + queueId + ":" + index)
+            )
+                    .flatMap(ticket -> ticketRepo.addToSet(READY_SET_PREFIX + queueId, ticket,
+                            Instant.now().getEpochSecond() + queue.getHoldTimeForActivate()))
+                    .then(queueRepo.incHead(queueId, newUser.intValue()))
+                    .flatMap(head -> {
+                        log.info(String.format("Queue:%s | Pushed new users: %d |Current head:%d | Current tail:%d",
+                                queueId, newUser, head, queue.getTail()));
+                        return Mono.empty();
+                    });
+        });
     }
 }

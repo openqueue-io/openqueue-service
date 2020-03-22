@@ -84,7 +84,6 @@ class TicketServiceTest {
                 .assertNext(responseBodyResponseEntity -> {
                     JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
                     Ticket ticket = jsonRes.getJSONObject("data").toJavaObject(Ticket.class);
-                    System.out.println(ticket);
                     assertThat(ticket.getId()).isNotNull();
                     assertThat(ticket.getAuthCode()).isNotNull();
                     assertThat(ticket.getIssueTime()).isNotNull();
@@ -180,8 +179,10 @@ class TicketServiceTest {
     @Test
     void testActivateTicket(){
         TicketAuthDto ticketAuthDto = applyTicket();
-        ticketAuthDto.setAuthCode("123");
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
+
+        // Ticket Not exist.
+        when(ticketRepo.findById(anyString())).thenReturn(Mono.empty());
+        when(ticketRepo.isTicketInSet(startsWith(ACTIVE_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
 
         try {
             ticketService.activateTicket(ticketAuthDto).block();
@@ -191,6 +192,18 @@ class TicketServiceTest {
             assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
         }
 
+        // Ticket's auth code is not valid.
+        when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
+        ticketAuthDto.setAuthCode("123");
+        try {
+            ticketService.activateTicket(ticketAuthDto).block();
+        } catch (TicketServiceException e) {
+            assertThat(e).isInstanceOf(TicketServiceException.class);
+            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
+        }
+
+        // Not in activated set either ready set.
         ticketAuthDto.setAuthCode(ticket.getAuthCode());
 
         when(ticketRepo.isTicketInSet(startsWith(ACTIVE_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
@@ -204,6 +217,17 @@ class TicketServiceTest {
             assertThat(e.getResultCode()).isEqualTo(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION);
         }
 
+        // Ticket already activated.
+        when(ticketRepo.isTicketInSet(startsWith(ACTIVE_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.TRUE));
+        when(ticketRepo.isTicketInSet(startsWith(READY_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
+
+        try {
+            ticketService.activateTicket(ticketAuthDto).block();
+        } catch (TicketServiceException e) {
+            assertThat(e).isInstanceOf(TicketServiceException.class);
+            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertThat(e.getResultCode()).isEqualTo(ResultCode.TICKET_ALREADY_ACTIVATED_EXCEPTION);
+        }
     }
 
     @Test

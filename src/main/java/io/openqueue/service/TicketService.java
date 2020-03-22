@@ -122,35 +122,52 @@ public class TicketService {
 
     public Mono<ResponseEntity<ResponseBody>> activateTicket(TicketAuthDto ticketAuthDto) {
         String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
-        Ticket ticket = ticketRepo.findById(ticketAuthDto.getTicketId()).block();
+        return validateTicket(ticketAuthDto)
+                .then(ticketRepo.isTicketInSet(queueActiveSetKey, ticketAuthDto.getToken()))
+                .flatMap(activated -> {
+                    if (activated) {
+                        throw new TicketServiceException(ResultCode.TICKET_ALREADY_ACTIVATED_EXCEPTION, HttpStatus.BAD_REQUEST);
+                    }
+                    String queueReadySetKey = READY_SET_PREFIX + ticketAuthDto.getQueueId();
+                    return ticketRepo.isTicketInSet(queueReadySetKey, ticketAuthDto.getTicketId());
+                })
+                .flatMap(readyToActivate -> {
+                    if (!readyToActivate) {
+                        throw new TicketServiceException(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
+                    }
+                    return doActivatedTicket(ticketAuthDto);
+                })
+                .thenReturn(ResponseEntity.ok(new ResponseBody(ResultCode.ACTIVATE_TICKET_SUCCESS)));
+    }
 
-        if (ticket == null || !ticketAuthDto.getAuthCode().equals(ticket.getAuthCode())) {
-            throw new TicketServiceException(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION, HttpStatus.UNAUTHORIZED);
-        }
+    private Mono<Ticket> validateTicket(TicketAuthDto ticketAuthDto) {
+        TicketServiceException ticketServiceException = new TicketServiceException(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION, HttpStatus.UNAUTHORIZED);
+        return ticketRepo.findById(ticketAuthDto.getTicketId())
+                .flatMap(ticket -> {
+                    if (!ticketAuthDto.getAuthCode().equals(ticket.getAuthCode())) {
+                        return Mono.error(ticketServiceException);
+                    }
+                    return Mono.just(ticket);
+                })
+                .switchIfEmpty(Mono.error(ticketServiceException))
+                .onErrorResume(throwable -> {
+                    throw ticketServiceException;
+                });
+    }
 
-        Boolean active = ticketRepo.isTicketInSet(queueActiveSetKey, ticketAuthDto.getToken()).block();
+    private Mono<Void> doActivatedTicket(TicketAuthDto ticketAuthDto) {
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + ticketAuthDto.getQueueId();
+        String queueReadySetKey = READY_SET_PREFIX + ticketAuthDto.getQueueId();
 
-        if (!Objects.requireNonNull(active)) {
-            String queueReadySetKey = READY_SET_PREFIX + ticketAuthDto.getQueueId();
-            Boolean ready = ticketRepo.isTicketInSet(queueReadySetKey, ticketAuthDto.getTicketId()).block();
-
-            if (!Objects.requireNonNull(ready)) {
-                throw new TicketServiceException(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION, HttpStatus.PRECONDITION_FAILED);
-            }
-
-            return queueRepo.findById(ticketAuthDto.getQueueId())
-                    .flatMap(queue -> {
-                        long expirationTime = Instant.now().getEpochSecond() + queue.getAvailableSecondPerUser();
-                        return Mono.just(expirationTime);
-                    })
-                    .flatMap(expirationTime -> ticketRepo.addToSet(queueActiveSetKey, ticketAuthDto.getToken(), expirationTime))
-                    .then(ticketRepo.incUsage(ticketAuthDto.getTicketId()))
-                    .then(ticketRepo.setActivateTime(ticketAuthDto.getTicketId(), Instant.now().getEpochSecond()))
-                    .then(ticketRepo.removeOutOfSetById(queueReadySetKey, ticketAuthDto.getTicketId()))
-                    .thenReturn(ResponseEntity.ok(new ResponseBody(ResultCode.ACTIVATE_TICKET_SUCCESS)));
-        }
-
-        return Mono.just(ResponseEntity.ok(new ResponseBody(ResultCode.ACTIVATE_TICKET_SUCCESS)));
+        return queueRepo.findById(ticketAuthDto.getQueueId())
+                .flatMap(queue -> {
+                    long expirationTime = Instant.now().getEpochSecond() + queue.getAvailableSecondPerUser();
+                    return ticketRepo.addToSet(queueActiveSetKey, ticketAuthDto.getToken(), expirationTime);
+                })
+                .then(ticketRepo.incUsage(ticketAuthDto.getTicketId()))
+                .then(ticketRepo.setActivateTime(ticketAuthDto.getTicketId(), Instant.now().getEpochSecond()))
+                .then(ticketRepo.removeOutOfSetById(queueReadySetKey, ticketAuthDto.getTicketId()))
+                .then();
     }
 
     public Mono<ResponseEntity<ResponseBody>> revokeTicket(TicketAuthDto ticketAuthDto) {

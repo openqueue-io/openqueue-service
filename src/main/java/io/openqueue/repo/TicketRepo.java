@@ -85,14 +85,4 @@ public class TicketRepo {
         return reactiveRedisTemplate.delete(ticketId);
     }
 
-//    public Mono<Long> addTicketToSet(String setKey, String ticketPrefix, int start, int increment, int timeout) {
-//        return Flux.fromStream(
-//                IntStream.range(start + 1, start + increment + 1)
-//                        .boxed()
-//                        .map(index -> ticketPrefix + ":" + index)
-//        )
-//                .flatMap(ticket -> reactiveRedisTemplate.opsForSet().add(setKey, ticket, Instant.now().getEpochSecond() + timeout))
-//                .reduce(0L, Long::sum);
-//    }
-
 }
