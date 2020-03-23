@@ -40,9 +40,8 @@ public class TicketService {
                     if (!hasElement) {
                         throw new TicketServiceException(ResultCode.QUEUE_NOT_EXIST_EXCEPTION, HttpStatus.NOT_FOUND);
                     }
-                    return Mono.empty();
+                    return queueRepo.incAndGetTail(queueId);
                 })
-                .then(queueRepo.incAndGetTail(queueId))
                 .flatMap(position -> {
                     String authCode = RandomCodeGenerator.getCode();
                     String ticketId = "t:" + queueId + ":" + position;
