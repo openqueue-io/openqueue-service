@@ -24,6 +24,7 @@ public class QueueRepo {
     private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
     public Mono<Queue> createOrUpdate(Queue queue) {
+        reactiveRedisTemplate.ex
         return reactiveRedisTemplate.opsForHash().putAll(queue.getId(), TypeConverter.pojo2Map(queue)).thenReturn(queue);
     }
 

@@ -102,6 +102,11 @@ public enum ResultCode {
     UNDEFINED_TICKET_STATE_EXCEPTION(40601, "New state is not acceptable because it is undefined."),
 
     /**
+     * Undefined ticket state
+     */
+    UNDEFINED_TICKET_QUERY_EXCEPTION(40602, "Undefined query value."),
+
+    /**
      * Ticket has been occupied
      */
     TICKET_OCCUPIED_EXCEPTION(40901, "This ticket has been occupied."),

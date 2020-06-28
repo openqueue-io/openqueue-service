@@ -5,7 +5,6 @@ import com.alibaba.fastjson.JSONObject;
 import io.openqueue.common.api.ResultCode;
 import io.openqueue.common.exception.TicketServiceException;
 import io.openqueue.dto.TicketAuthDto;
-import io.openqueue.dto.TicketUsageStatDto;
 import io.openqueue.model.Queue;
 import io.openqueue.model.Ticket;
 import io.openqueue.repo.QueueRepo;
@@ -92,36 +91,11 @@ class TicketServiceTest {
     }
 
     @Test
-    void testTicketUsageStat(){
-        TicketAuthDto ticketAuthDto = applyTicket();
-        when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.FALSE));
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
-
-        StepVerifier.create(ticketService.getTicketUsageStat(ticketAuthDto))
-                .expectErrorSatisfies(error -> {
-                    assert error instanceof TicketServiceException;
-                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.PRECONDITION_FAILED);
-                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION);
-                })
-                .verify();
-
-        when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.TRUE));
-        StepVerifier.create(ticketService.getTicketUsageStat(ticketAuthDto))
-                .assertNext(responseBodyResponseEntity -> {
-                    JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
-                    TicketUsageStatDto ticketUsageStatDto = jsonRes.getJSONObject("data").toJavaObject(TicketUsageStatDto.class);
-                    assertThat(ticketUsageStatDto.getCountOfUsage()).isEqualTo(0);
-                    assertThat(ticketUsageStatDto.getActivateTime()).isEqualTo(123L);
-                })
-                .verifyComplete();
-    }
-
-    @Test
     void testGetTicketAuthorization(){
         TicketAuthDto ticketAuthDto = applyTicket();
 
         try {
-            ticketService.getTicketAuthorization(ticketAuthDto, "wrong_qid").block();
+            ticketService.verifyTicket(ticketAuthDto).block();
         } catch (TicketServiceException e) {
             assertThat(e).isInstanceOf(TicketServiceException.class);
             assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
@@ -132,7 +106,7 @@ class TicketServiceTest {
         when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
         when(ticketRepo.incUsage(anyString())).thenReturn(Mono.just(1L));
 
-        StepVerifier.create(ticketService.getTicketAuthorization(ticketAuthDto, ticketAuthDto.getQueueId()))
+        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
                 .expectErrorSatisfies(error -> {
                     assert error instanceof TicketServiceException;
                     assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.PRECONDITION_FAILED);
@@ -143,7 +117,7 @@ class TicketServiceTest {
         when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.TRUE));
         ticket.setOccupied(true);
 
-        StepVerifier.create(ticketService.getTicketAuthorization(ticketAuthDto, ticketAuthDto.getQueueId()))
+        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
                 .expectErrorSatisfies(error -> {
                     assert error instanceof TicketServiceException;
                     assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
@@ -152,7 +126,7 @@ class TicketServiceTest {
                 .verify();
 
         ticket.setOccupied(false);
-        StepVerifier.create(ticketService.getTicketAuthorization(ticketAuthDto, ticketAuthDto.getQueueId()))
+        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
                 .assertNext(responseBodyResponseEntity -> {
                     JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
                     assertThat(jsonRes.getIntValue("code")).isEqualTo(ResultCode.TICKET_AUTHORIZED_SUCCESS.getCode());
@@ -161,20 +135,6 @@ class TicketServiceTest {
                 .verifyComplete();
     }
 
-    @Test
-    void testSetTicketOccupied(){
-        TicketAuthDto ticketAuthDto = applyTicket();
-
-        when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.FALSE));
-        when(ticketRepo.setOccupied(anyString())).thenReturn(Mono.empty());
-        StepVerifier.create(ticketService.setTicketOccupied(ticketAuthDto))
-                .expectErrorSatisfies(error -> {
-                    assert error instanceof TicketServiceException;
-                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.PRECONDITION_FAILED);
-                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION);
-                })
-                .verify();
-    }
 
     @Test
     void testActivateTicket(){

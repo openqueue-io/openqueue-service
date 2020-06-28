@@ -1,18 +1,16 @@
 package io.openqueue.controller;
 
 import io.openqueue.dto.TicketAuthDto;
-import io.openqueue.dto.TicketStateDto;
 import io.openqueue.service.TicketService;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.reactive.server.WebTestClient;
-import org.springframework.web.reactive.function.BodyInserters;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -21,6 +19,7 @@ import static org.mockito.Mockito.verify;
 
 @RunWith(SpringRunner.class)
 @WebFluxTest(controllers = TicketController.class)
+@Slf4j
 class TicketControllerTest {
 
     @Autowired
@@ -35,10 +34,10 @@ class TicketControllerTest {
     @BeforeAll
     static void runBeforeAllTestMethod() {
         token = Base64.getUrlEncoder().encodeToString("t:q:sad1fghS:123:oi2sdfD".getBytes());
-        System.out.println("Before encode:" + "t:q:sad1fghS:123:oi2sdfD");
-        System.out.println("testTicketId encode to base64url: " + token);
+        log.info("Before encode:" + "t:q:sad1fghS:123:oi2sdfD");
+        log.info("testTicketId encode to base64url: " + token);
         String decode = new String(Base64.getUrlDecoder().decode(token), StandardCharsets.UTF_8);
-        System.out.println("After decode:" + decode);
+        log.info("After decode:" + decode);
 
         ticketAuthDto = TicketAuthDto.builder()
                 .authCode("oi2sdfD")
@@ -51,68 +50,37 @@ class TicketControllerTest {
 
     @Test
     void testApplyTicket() throws Exception {
+        String reqUrl = "/api/v1/ticket?qid=1234";
+        log.info("Apply Ticket: POST " + reqUrl);
+
         webTestClient.post()
-                .uri("/v1/ticket/apply?qid=1234")
+                .uri(reqUrl)
                 .exchange();
 
         verify(ticketService).applyTicket("q:1234");
     }
 
+
     @Test
-    void testGetTicketUsage() throws Exception {
-        String reqUrl = "/v1/ticket/stat?ticket=" + token;
+    void testVerifyTicket() throws Exception {
+        String reqUrl = "/api/v1/ticket/?query=verify&ticket=" + token;
+        log.info("Verify Ticket: GET " + reqUrl);
 
         webTestClient.get()
                 .uri(reqUrl)
                 .exchange();
 
-        verify(ticketService).getTicketUsageStat(ticketAuthDto);
+        verify(ticketService).verifyTicket(ticketAuthDto);
     }
 
-    @Test
-    void testGetTicketAuthorization() throws Exception {
-        String reqUrl = "/v1/ticket/authorization?qid=1234&ticket=" + token;
-
-        webTestClient.get()
-                .uri(reqUrl)
-                .exchange();
-
-        verify(ticketService).getTicketAuthorization(ticketAuthDto, "q:1234");
-    }
-
-    @Test
-    void testMarkTicketInUse() throws Exception {
-        String reqUrl = "/v1/ticket/state";
-        System.out.println(reqUrl);
-
-        TicketStateDto ticketStateDto = TicketStateDto.builder()
-                .state("OCCUPIED")
-                .ticketToken(token)
-                .build();
-
-        webTestClient.put()
-                .uri(reqUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(ticketStateDto))
-                .exchange();
-
-        verify(ticketService).setTicketOccupied(ticketAuthDto);
-    }
 
     @Test
     void testActivateTicket() throws Exception {
-        String reqUrl = "/v1/ticket/state";
-        System.out.println(reqUrl);
-
-        TicketStateDto ticketStateDto = TicketStateDto.builder()
-                .state("ACTIVE")
-                .ticketToken(token)
-                .build();
+        String reqUrl = "/api/v1/ticket?ticket=" + token + "&state=ACTIVE";
+        log.info("Activate Ticket: PUT " + reqUrl);
 
         webTestClient.put()
                 .uri(reqUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(ticketStateDto))
                 .exchange();
 
         verify(ticketService).activateTicket(ticketAuthDto);
@@ -120,18 +88,11 @@ class TicketControllerTest {
 
     @Test
     void testRevokeTicket() throws Exception {
-        String reqUrl = "/v1/ticket/state";
-        System.out.println(reqUrl);
-
-        TicketStateDto ticketStateDto = TicketStateDto.builder()
-                .state("REVOKED")
-                .ticketToken(token)
-                .build();
+        String reqUrl = "/api/v1/ticket?ticket=" + token + "&state=REVOKED";
+        log.info("Revoke Ticket: PUT " + reqUrl);
 
         webTestClient.put()
                 .uri(reqUrl)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(ticketStateDto))
                 .exchange();
 
         verify(ticketService).revokeTicket(ticketAuthDto);

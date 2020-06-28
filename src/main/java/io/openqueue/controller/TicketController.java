@@ -2,11 +2,11 @@ package io.openqueue.controller;
 
 import io.openqueue.common.api.ResponseBody;
 import io.openqueue.common.api.ResultCode;
+import io.openqueue.common.constant.Query;
 import io.openqueue.common.constant.TicketState;
 import io.openqueue.common.exception.TicketServiceException;
 import io.openqueue.common.util.AuthUtil;
 import io.openqueue.dto.TicketAuthDto;
-import io.openqueue.dto.TicketStateDto;
 import io.openqueue.service.TicketService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,44 +19,42 @@ import reactor.core.publisher.Mono;
  * @author chenjing
  */
 @RestController
-@RequestMapping("/v1/ticket")
+@RequestMapping("/api/v1/ticket")
 @Validated
 public class TicketController {
 
     @Autowired
     private TicketService ticketService;
 
-    @PostMapping(value = "/apply")
+    @PostMapping
     public Mono<ResponseEntity<ResponseBody>> applyTicket(@RequestParam String qid){
         return ticketService.applyTicket("q:" + qid);
     }
 
-    @GetMapping(value = "/stat")
-    public Mono<ResponseEntity<ResponseBody>> getTicketUsageStat(@RequestParam String ticket){
+    @GetMapping
+    public Mono<ResponseEntity<ResponseBody>> getTicketAuthorization(@RequestParam String ticket, @RequestParam String query){
         TicketAuthDto ticketAuthDto = this.preprocess(ticket);
-        return ticketService.getTicketUsageStat(ticketAuthDto);
+
+        switch (query) {
+            case Query.TICKET_VERIFY:
+                return ticketService.verifyTicket(ticketAuthDto);
+            default:
+                throw new TicketServiceException(ResultCode.UNDEFINED_TICKET_QUERY_EXCEPTION, HttpStatus.BAD_REQUEST);
+        }
+
     }
 
-    @GetMapping(value = "/authorization")
-    public Mono<ResponseEntity<ResponseBody>> getTicketAuthorization(@RequestParam String ticket,
-                                                 @RequestParam String qid){
+    @PutMapping
+    public Mono<ResponseEntity<ResponseBody>> updateTicketState(@RequestParam String ticket, @RequestParam String state){
         TicketAuthDto ticketAuthDto = this.preprocess(ticket);
-        return ticketService.getTicketAuthorization(ticketAuthDto, "q:" + qid);
-    }
 
-    @PutMapping(value = "/state")
-    public Mono<ResponseEntity<ResponseBody>> updateTicketState(@RequestBody TicketStateDto ticketStateDto){
-        TicketAuthDto ticketAuthDto = this.preprocess(ticketStateDto.getTicketToken());
-
-        switch (ticketStateDto.getState()) {
+        switch (state) {
             case TicketState.ACTIVE:
                 return ticketService.activateTicket(ticketAuthDto);
-            case TicketState.OCCUPIED:
-                return ticketService.setTicketOccupied(ticketAuthDto);
             case TicketState.REVOKED:
                 return ticketService.revokeTicket(ticketAuthDto);
             default:
-                throw new TicketServiceException(ResultCode.UNDEFINED_TICKET_STATE_EXCEPTION, HttpStatus.NOT_ACCEPTABLE);
+                throw new TicketServiceException(ResultCode.UNDEFINED_TICKET_STATE_EXCEPTION, HttpStatus.BAD_REQUEST);
         }
     }
 
