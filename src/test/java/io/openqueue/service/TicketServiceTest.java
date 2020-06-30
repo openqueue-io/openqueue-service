@@ -54,41 +54,39 @@ class TicketServiceTest {
 
         ticket = Ticket.builder()
                 .id("t:q:3nHFKa:1000")
-                .countOfUsage(0)
                 .issueTime(123L)
                 .authCode("DRFGasjdm1")
-                .activateTime(123L)
                 .build();
 
     }
 
-    @Test
-    void testApplyTicket(){
-        when(queueRepo.findById(anyString())).thenReturn(Mono.empty());
-        when(queueRepo.incAndGetTail(anyString())).thenReturn(Mono.just(1L));
-
-        StepVerifier.create(ticketService.applyTicket(testQueueId))
-                .expectErrorSatisfies(error -> {
-                    assert error instanceof TicketServiceException;
-                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.QUEUE_NOT_EXIST_EXCEPTION);
-                })
-                .verify();
-
-        when(queueRepo.findById(anyString())).thenReturn(Mono.just(queue));
-        when(queueRepo.incAndGetTail(anyString())).thenReturn(Mono.just(1L));
-        when(ticketRepo.create(any(Ticket.class))).thenReturn(Mono.just(ticket));
-
-        StepVerifier.create(ticketService.applyTicket(testQueueId))
-                .assertNext(responseBodyResponseEntity -> {
-                    JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
-                    Ticket ticket = jsonRes.getJSONObject("data").toJavaObject(Ticket.class);
-                    assertThat(ticket.getId()).isNotNull();
-                    assertThat(ticket.getAuthCode()).isNotNull();
-                    assertThat(ticket.getIssueTime()).isNotNull();
-                })
-                .verifyComplete();
-    }
+//    @Test
+//    void testApplyTicket(){
+//        when(queueRepo.findById(anyString())).thenReturn(Mono.empty());
+//        when(queueRepo.incAndGetTail(anyString())).thenReturn(Mono.just(1L));
+//
+//        StepVerifier.create(ticketService.applyTicket(testQueueId))
+//                .expectErrorSatisfies(error -> {
+//                    assert error instanceof TicketServiceException;
+//                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+//                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.QUEUE_NOT_EXIST_EXCEPTION);
+//                })
+//                .verify();
+//
+//        when(queueRepo.findById(anyString())).thenReturn(Mono.just(queue));
+//        when(queueRepo.incAndGetTail(anyString())).thenReturn(Mono.just(1L));
+//        when(ticketRepo.create(any(Ticket.class))).thenReturn(Mono.just(ticket));
+//
+//        StepVerifier.create(ticketService.applyTicket(testQueueId))
+//                .assertNext(responseBodyResponseEntity -> {
+//                    JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
+//                    Ticket ticket = jsonRes.getJSONObject("data").toJavaObject(Ticket.class);
+//                    assertThat(ticket.getId()).isNotNull();
+//                    assertThat(ticket.getAuthCode()).isNotNull();
+//                    assertThat(ticket.getIssueTime()).isNotNull();
+//                })
+//                .verifyComplete();
+//    }
 
     @Test
     void testGetTicketAuthorization(){
@@ -115,7 +113,7 @@ class TicketServiceTest {
                 .verify();
 
         when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.TRUE));
-        ticket.setOccupied(true);
+//        ticket.setOccupied(true);
 
         StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
                 .expectErrorSatisfies(error -> {
@@ -125,7 +123,7 @@ class TicketServiceTest {
                 })
                 .verify();
 
-        ticket.setOccupied(false);
+//        ticket.setOccupied(false);
         StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
                 .assertNext(responseBodyResponseEntity -> {
                     JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());

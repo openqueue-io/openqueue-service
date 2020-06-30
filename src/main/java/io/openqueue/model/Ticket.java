@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Transient;
 
 import java.time.Instant;
 
@@ -16,11 +17,8 @@ import java.time.Instant;
 @Builder
 public class Ticket {
     private String id;
+    @Transient
+    private String queueId;
     private String authCode;
     private long issueTime;
-    private long activateTime;
-    @Builder.Default
-    private boolean occupied = false;
-    @Builder.Default
-    private int countOfUsage = 0;
 }

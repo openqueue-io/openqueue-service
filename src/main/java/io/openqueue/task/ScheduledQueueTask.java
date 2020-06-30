@@ -31,7 +31,7 @@ public class ScheduledQueueTask {
 
     private static final int LOCK_TIME_FOR_EACH_QUEUE = 3;
 
-    @Scheduled(fixedRate = 5000)
+//    @Scheduled(fixedRate = 5000)
     public void pushAllQueuesForward() {
         queueRepo.findAllId()
                 .flatMap(this::pushQueueForward)

@@ -32,29 +32,22 @@ public class TicketService {
     private QueueRepo queueRepo;
 
     public Mono<ResponseEntity<ResponseBody>> applyTicket(String queueId) {
-        return queueRepo.findById(queueId)
-                .hasElement()
-                .flatMap(hasElement -> {
-                    if (!hasElement) {
+        String authCode = RandomCodeGenerator.getCode();
+        Ticket ticket = Ticket.builder()
+                .queueId(queueId)
+                .issueTime(Instant.now().getEpochSecond())
+                .authCode(authCode)
+                .build();
+
+        return ticketRepo.applyOne(ticket)
+                .flatMap(position -> {
+                    if (position == -1) {
                         throw new TicketServiceException(ResultCode.QUEUE_NOT_EXIST_EXCEPTION, HttpStatus.NOT_FOUND);
                     }
-                    return queueRepo.incAndGetTail(queueId);
-                })
-                .flatMap(position -> {
-                    String authCode = RandomCodeGenerator.getCode();
-                    String ticketId = "t:" + queueId + ":" + position;
-                    Ticket ticket = Ticket.builder()
-                            .id(ticketId)
-                            .issueTime(Instant.now().getEpochSecond())
-                            .authCode(authCode)
-                            .build();
-                    return ticketRepo.create(ticket);
-                })
-                .flatMap(ticket -> {
-                            ResponseBody responseBody = new ResponseBody(ResultCode.APPLY_TICKET_SUCCESS, ticket);
-                            return Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(responseBody));
-                        }
-                );
+                    ticket.setId("t:" + queueId + ":" + position);
+                    ResponseBody responseBody = new ResponseBody(ResultCode.APPLY_TICKET_SUCCESS, ticket);
+                    return Mono.just(ResponseEntity.status(HttpStatus.CREATED).body(responseBody));
+                });
     }
 
     public Mono<ResponseEntity<ResponseBody>> verifyTicket(TicketAuthDto ticketAuthDto) {
@@ -70,9 +63,9 @@ public class TicketService {
                 })
                 .then(ticketRepo.findById(ticketAuthDto.getTicketId()))
                 .flatMap(ticket -> {
-                    if (ticket.isOccupied()) {
-                        throw new TicketServiceException(ResultCode.TICKET_OCCUPIED_EXCEPTION, HttpStatus.CONFLICT);
-                    }
+//                    if (ticket.isOccupied()) {
+//                        throw new TicketServiceException(ResultCode.TICKET_OCCUPIED_EXCEPTION, HttpStatus.CONFLICT);
+//                    }
                     return Mono.empty();
                 })
                 .then(ticketRepo.incUsage(ticketAuthDto.getTicketId()))

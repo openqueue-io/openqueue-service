@@ -28,7 +28,7 @@ public class TicketController {
 
     @PostMapping
     public Mono<ResponseEntity<ResponseBody>> applyTicket(@RequestParam String qid){
-        return ticketService.applyTicket("q:" + qid);
+        return ticketService.applyTicket(qid);
     }
 
     @GetMapping
