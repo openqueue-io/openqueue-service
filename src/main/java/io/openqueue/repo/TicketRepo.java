@@ -1,7 +1,8 @@
 package io.openqueue.repo;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.support.spring.FastJsonRedisSerializer;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.openqueue.model.Ticket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -18,10 +19,7 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.Serializable;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author chenjing
@@ -33,13 +31,17 @@ public class TicketRepo {
     private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
     private DefaultRedisScript<List> applyTicketScript;
-
+    private DefaultRedisScript<List> verifyTicketScript;
 
     @PostConstruct
     public void init() {
         applyTicketScript = new DefaultRedisScript<>();
         applyTicketScript.setResultType(List.class);
         applyTicketScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/apply_ticket.lua")));
+
+        verifyTicketScript = new DefaultRedisScript<>();
+        verifyTicketScript.setResultType(List.class);
+        verifyTicketScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/verify_ticket.lua")));
     }
 
     public Mono<Long> applyOne(Ticket ticket) {
@@ -51,6 +53,19 @@ public class TicketRepo {
                         RedisElementReader.from(new Jackson2JsonRedisSerializer<>(List.class)))
                 .flatMap(list -> Mono.just((Long) list.get(0)))
                 .single();
+    }
+
+    public Mono<Long> verify(String activeSetKey, String ticketToken, String ticketId) {
+        return reactiveRedisTemplate
+                .execute(verifyTicketScript,
+                        Collections.singletonList(activeSetKey),
+                        Arrays.asList(ticketToken, ticketId))
+                .log()
+                .flatMap(list -> Mono.just((Long)list.get(0)))
+                .single();
+    }
+
+    public Mono<Long> activate(List<String> keys, List<String> args) {
 
     }
 

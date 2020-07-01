@@ -13,6 +13,7 @@ import reactor.test.StepVerifier;
 
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.IntStream;
 
@@ -85,6 +86,12 @@ class TicketRepoTest {
 //        StepVerifier.create(ticketRepo.findById(testTicketId))
 //                .expectComplete()
 //                .verify();
+    }
+
+    @Test
+    void verifyTicket() {
+        Long result = ticketRepo.verify("set:active:q:test", "t:q:test:2", "t:q:test:2").block();
+        System.out.println(result);
     }
 
 //    @Test
