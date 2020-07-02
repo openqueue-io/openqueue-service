@@ -42,7 +42,6 @@ public class TicketService {
     @Qualifier("ExceptionMapper")
     Map<Integer, TicketServiceException> exceptionMap;
 
-    @SneakyThrows
     public Mono<ResponseEntity<ResponseBody>> applyTicket(String queueId) {
         String authCode = RandomCodeGenerator.getCode();
         long issueTime = Instant.now().getEpochSecond();
@@ -79,10 +78,7 @@ public class TicketService {
         return ticketRepo
                 .invokeLuaScript(LuaScript.TICKET_VERIFY, keys, args)
                 .flatMap(response -> {
-                    TicketServiceException ticketServiceException = exceptionMap.getOrDefault(response.intValue(), null);
-                    if (ticketServiceException != null) {
-                        throw ticketServiceException;
-                    }
+                    checkResponse(response.intValue());
                     return Mono.just(ResponseEntity.ok(new ResponseBody(ResultCode.TICKET_AUTHORIZED_SUCCESS)));
                 })
                 .single();
@@ -100,10 +96,7 @@ public class TicketService {
         return ticketRepo
                 .invokeLuaScript(LuaScript.TICKET_ACTIVATE, keys, args)
                 .flatMap(response -> {
-                    TicketServiceException ticketServiceException = exceptionMap.getOrDefault(response.intValue(), null);
-                    if (ticketServiceException != null) {
-                        throw ticketServiceException;
-                    }
+                    checkResponse(response.intValue());
                     return Mono.just(ResponseEntity.ok(new ResponseBody(ResultCode.ACTIVATE_TICKET_SUCCESS)));
                 })
                 .single();
@@ -120,12 +113,16 @@ public class TicketService {
         return ticketRepo
                 .invokeLuaScript(LuaScript.TICKET_REVOKE, keys, args)
                 .flatMap(response -> {
-                    TicketServiceException ticketServiceException = exceptionMap.getOrDefault(response.intValue(), null);
-                    if (ticketServiceException != null) {
-                        throw ticketServiceException;
-                    }
+                    checkResponse(response.intValue());
                     return Mono.just(ResponseEntity.accepted().body(new ResponseBody(ResultCode.REVOKE_TICKET_SUCCESS)));
                 })
                 .single();
+    }
+
+    private void checkResponse(int responseCode) {
+        TicketServiceException ticketServiceException = exceptionMap.getOrDefault(responseCode, null);
+        if (ticketServiceException != null) {
+            throw ticketServiceException;
         }
+    }
 }
