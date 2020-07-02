@@ -17,8 +17,6 @@ import java.time.Instant;
 @Builder
 public class Ticket {
     private String id;
-    @Transient
-    private String queueId;
     private String authCode;
     private long issueTime;
 }

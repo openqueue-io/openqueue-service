@@ -43,7 +43,6 @@ class TicketRepoTest {
         testQueueId = "q:sad1fghS";
         testTicketId = "t:" + testQueueId + ":1";
         ticket = Ticket.builder()
-                .queueId(testQueueId)
                 .id(testTicketId)
                 .authCode("1asdIU2ay")
                 .issueTime(Instant.now().getEpochSecond())
@@ -57,18 +56,18 @@ class TicketRepoTest {
 
     @Test
     void testCreateFindAndRevokeTicket() {
-        reactiveStringRedisTemplate.opsForHash().put(testQueueId, "id", testQueueId).block();
-        reactiveRedisTemplate.opsForHash().put(testQueueId, "tail", 0).block();
-        // Make sure no that ticket at first.
-        StepVerifier.create(ticketRepo.findById(testTicketId))
-                .expectComplete()
-                .verify();
-
-        // Create a new ticket.
-        StepVerifier.create(ticketRepo.applyOne(ticket))
-                .expectNext(1L)
-                .expectComplete()
-                .verify();
+//        reactiveStringRedisTemplate.opsForHash().put(testQueueId, "id", testQueueId).block();
+//        reactiveRedisTemplate.opsForHash().put(testQueueId, "tail", 0).block();
+//        // Make sure no that ticket at first.
+//        StepVerifier.create(ticketRepo.findById(testTicketId))
+//                .expectComplete()
+//                .verify();
+//
+//        // Create a new ticket.
+//        StepVerifier.create(ticketRepo.applyOne(ticket))
+//                .expectNext(1L)
+//                .expectComplete()
+//                .verify();
 
 //        // Expect the ticket has been created.
 //        StepVerifier.create(ticketRepo.findById(testTicketId))
@@ -90,8 +89,8 @@ class TicketRepoTest {
 
     @Test
     void verifyTicket() {
-        Long result = ticketRepo.verify("set:active:q:test", "t:q:test:2", "t:q:test:2").block();
-        System.out.println(result);
+//        Long result = ticketRepo.verify("set:active:q:test", "t:q:test:2", "t:q:test:2").block();
+//        System.out.println(result);
     }
 
 //    @Test
@@ -115,130 +114,34 @@ class TicketRepoTest {
 //                .verify();
 //    }
 
-    @Test
-    void testAddTicketToSet() {
-        String setKey = "set:test";
-
-        // Make sure no ticket in the set at first.
-        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
-                .expectNext(Boolean.FALSE)
-                .expectComplete()
-                .verify();
-
-        // Add ticket to set.
-        long currentTime = Instant.now().getEpochSecond();
-        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime + 10))
-                .expectComplete()
-                .verify();
-
-        // Expect ticket in set now.
-        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
-                .expectNext(Boolean.TRUE)
-                .expectComplete()
-                .verify();
-    }
 
     @Test
     void testRemoveTicketById() {
-        String setKey = "set:test";
-
-        // 1. Add ticket to set.
-        // 2. Make sure ticket in set at first.
-        long currentTime = Instant.now().getEpochSecond();
-        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime + 10)
-                .then(ticketRepo.isTicketInSet(setKey, testTicketId)))
-                .expectNext(Boolean.TRUE)
-                .expectComplete()
-                .verify();
-
-        // Remove ticket by id
-        StepVerifier.create(ticketRepo.removeOutOfSetById(setKey, testTicketId))
-                .expectNext(1L)
-                .expectComplete()
-                .verify();
-
-        // Make sure no ticket in the set now.
-        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
-                .expectNext(Boolean.FALSE)
-                .expectComplete()
-                .verify();
-    }
-
-    @Test
-    void testRemoveTicketByTime() {
-        String setKey = "set:test";
-
-        // 1. Add ticket to set.
-        // 2. Make sure ticket in set at first.
-        long currentTime = Instant.now().getEpochSecond();
-        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime)
-                .then(ticketRepo.isTicketInSet(setKey, testTicketId)))
-                .expectNext(Boolean.TRUE)
-                .expectComplete()
-                .verify();
-
-        // Remove ticket by early time
-        StepVerifier.create(ticketRepo.removeOutOfSetByTime(setKey, currentTime - 1))
-                .expectNext(0L)
-                .expectComplete()
-                .verify();
-
-        // Expect ticket still in the set.
-        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
-                .expectNext(Boolean.TRUE)
-                .expectComplete()
-                .verify();
-
-        // Remove ticket by post time
-        StepVerifier.create(ticketRepo.removeOutOfSetByTime(setKey, currentTime + 1))
-                .expectNext(1L)
-                .expectComplete()
-                .verify();
-
-        // Expect ticket not in the set.
-        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
-                .expectNext(Boolean.FALSE)
-                .expectComplete()
-                .verify();
+//        String setKey = "set:test";
+//
+//        // 1. Add ticket to set.
+//        // 2. Make sure ticket in set at first.
+//        long currentTime = Instant.now().getEpochSecond();
+//        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime + 10)
+//                .then(ticketRepo.isTicketInSet(setKey, testTicketId)))
+//                .expectNext(Boolean.TRUE)
+//                .expectComplete()
+//                .verify();
+//
+//        // Remove ticket by id
+//        StepVerifier.create(ticketRepo.removeOutOfSetById(setKey, testTicketId))
+//                .expectNext(1L)
+//                .expectComplete()
+//                .verify();
+//
+//        // Make sure no ticket in the set now.
+//        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
+//                .expectNext(Boolean.FALSE)
+//                .expectComplete()
+//                .verify();
     }
 
 
-    @Test
-    void testCountTicketInSet() {
-        String setKey = "set:test";
-
-        // Make sure has no ticket in set at first.
-        StepVerifier.create(ticketRepo.countTicketInSet(setKey))
-                .expectNext(0L)
-                .expectComplete()
-                .verify();
-
-        // Add 999 tickets to set.
-        Long count = Flux.fromStream(
-                IntStream.range(1, 1000)
-                        .boxed()
-                        .map(index -> "ticket:test:" + index)
-        )
-                .flatMap(ticket -> ticketRepo.addToSet(setKey, ticket, new Random().nextInt()))
-                .count()
-                .block();
-
-        assertThat(count != null && count.intValue() == 999);
-
-        // Expect 999 tickets in set now.
-        StepVerifier.create(ticketRepo.countTicketInSet(setKey))
-                .expectNext(999L)
-                .expectComplete()
-                .verify();
-
-        cleanup();
-
-        // Expect no tickets left in set now.
-        StepVerifier.create(ticketRepo.countTicketInSet(setKey))
-                .expectNext(0L)
-                .expectComplete()
-                .verify();
-    }
 
     void cleanup() {
         reactiveRedisTemplate

@@ -1,20 +1,12 @@
 package io.openqueue.repo;
 
-import com.alibaba.fastjson.JSON;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.openqueue.model.Ticket;
+import io.openqueue.common.constant.LuaScript;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.data.domain.Range;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.RedisElementReader;
-import org.springframework.data.redis.serializer.RedisElementWriter;
 import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Repository;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
@@ -30,99 +22,27 @@ public class TicketRepo {
     @Autowired
     private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
-    private DefaultRedisScript<List> applyTicketScript;
-    private DefaultRedisScript<List> verifyTicketScript;
+    private Map<LuaScript, DefaultRedisScript<List>> redisScriptMap;
 
     @PostConstruct
     public void init() {
-        applyTicketScript = new DefaultRedisScript<>();
-        applyTicketScript.setResultType(List.class);
-        applyTicketScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/apply_ticket.lua")));
-
-        verifyTicketScript = new DefaultRedisScript<>();
-        verifyTicketScript.setResultType(List.class);
-        verifyTicketScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/verify_ticket.lua")));
+        redisScriptMap.put(LuaScript.TICKET_APPLY, loadScript("scripts/apply_ticket.lua"));
+        redisScriptMap.put(LuaScript.TICKET_VERIFY, loadScript("scripts/verify_ticket.lua"));
+        redisScriptMap.put(LuaScript.TICKET_ACTIVATE, loadScript("scripts/activate_ticket.lua"));
+        redisScriptMap.put(LuaScript.TICKET_REVOKE, loadScript("scripts/revoke_ticket.lua"));
     }
 
-    public Mono<Long> applyOne(Ticket ticket) {
+    private DefaultRedisScript<List> loadScript(String luaPath) {
+        DefaultRedisScript<List> script = new DefaultRedisScript<>();
+        script.setResultType(List.class);
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource(luaPath)));
+        return script;
+    }
+
+    public Mono<Long> invokeLuaScript(LuaScript luaScript, List<String> keys, List<String> args) {
         return reactiveRedisTemplate
-                .execute(applyTicketScript,
-                        Collections.singletonList(ticket.getQueueId()),
-                        Collections.singletonList(ticket),
-                        RedisElementWriter.from(new Jackson2JsonRedisSerializer<>(Ticket.class)),
-                        RedisElementReader.from(new Jackson2JsonRedisSerializer<>(List.class)))
+                .execute(redisScriptMap.get(luaScript), keys, args)
                 .flatMap(list -> Mono.just((Long) list.get(0)))
                 .single();
     }
-
-    public Mono<Long> verify(String activeSetKey, String ticketToken, String ticketId) {
-        return reactiveRedisTemplate
-                .execute(verifyTicketScript,
-                        Collections.singletonList(activeSetKey),
-                        Arrays.asList(ticketToken, ticketId))
-                .log()
-                .flatMap(list -> Mono.just((Long)list.get(0)))
-                .single();
-    }
-
-    public Mono<Long> activate(List<String> keys, List<String> args) {
-
-    }
-
-    public Mono<Ticket> findById(String ticketId) {
-        Flux<Map.Entry<Object, Object>> ticketMap = reactiveRedisTemplate.opsForHash().entries(ticketId);
-        return ticketMap
-                .reduce(new HashMap<>(), (map, entry) -> {
-                    map.put(entry.getKey(), entry.getValue());
-                    return map;
-                })
-                .flatMap(map -> {
-                    if (map.isEmpty()) {
-                        return Mono.empty();
-                    } else {
-                        JSON map2Json = (JSON) JSON.toJSON(map);
-                        Ticket ticket = map2Json.toJavaObject(Ticket.class);
-                        return Mono.just(ticket);
-                    }
-                });
-    }
-
-    public Mono<Long> incUsage(String ticketId) {
-        return reactiveRedisTemplate.opsForHash().increment(ticketId, "countOfUsage", 1);
-    }
-
-    public Mono<Void> setActivateTime(String ticketId, long currentTime) {
-        return reactiveRedisTemplate.opsForHash().put(ticketId, "activateTime", currentTime).then();
-    }
-
-    public Mono<Void> setOccupied(String ticketId) {
-        return reactiveRedisTemplate.opsForHash().put(ticketId, "occupied", Boolean.TRUE).then();
-    }
-
-    public Mono<Boolean> isTicketInSet(String setKey, String ticketId) {
-        return reactiveRedisTemplate.opsForZSet().score(setKey, ticketId)
-                .filter(score -> score > 0)
-                .hasElement();
-    }
-
-    public Mono<Void> addToSet(String setKey, String ticketId, long expirationTime) {
-        return reactiveRedisTemplate.opsForZSet().add(setKey, ticketId, expirationTime).then();
-    }
-
-    public Mono<Long> removeOutOfSetById(String setKey, String ticketId) {
-        return reactiveRedisTemplate.opsForZSet().remove(setKey, ticketId);
-    }
-
-    public Mono<Long> removeOutOfSetByTime(String setKey, long expirationTime) {
-        return reactiveRedisTemplate.opsForZSet().removeRangeByScore(setKey, Range.closed((double) 0, (double) expirationTime));
-    }
-
-    public Mono<Long> countTicketInSet(String setKey) {
-        return reactiveRedisTemplate.opsForZSet().size(setKey);
-    }
-
-    public Mono<Long> revoke(String ticketId) {
-        return reactiveRedisTemplate.delete(ticketId);
-    }
-
 }

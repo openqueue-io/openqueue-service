@@ -6,8 +6,8 @@
 ---
 
 local qid = KEYS[1]
-
-local ticket = cjson.decode(ARGV[1])
+local authCode = ARGV[1]
+local issueTime = ARGV[2]
 
 local res = redis.call("hget", qid , "id")
 
@@ -20,6 +20,9 @@ local position = redis.call("hincrby", qid , "tail", 1)
 
 local ticketId = "t:" .. qid .. ":" .. position
 
-redis.call("hmset", ticketId , "id", ticketId, "authCode", ticket.authCode, "issueTime", ticket.issueTime)
+redis.call("hmset", ticketId , "id", ticketId, "authCode", authCode, "issueTime", issueTime)
 
-return position
+local response = {}
+response[1] = position
+
+return response
