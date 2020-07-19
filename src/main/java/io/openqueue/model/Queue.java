@@ -19,7 +19,7 @@ public class Queue {
     private int head;
     private int tail;
     private int maxActiveUsers;
-    private int availableSecondPerUser;
-    private int holdTimeForActivate;
+    private int permissionExpirationSeconds;
+    private int timeoutForActivateSeconds;
     private String callbackURL;
 }

@@ -36,7 +36,7 @@ class QueueServiceTest {
     @BeforeAll
     static void runBeforeTestMethod() {
         queueConfigDto = QueueConfigDto.builder()
-                .availableSecondPerUser(300)
+                .permissionExpirationSeconds(300)
                 .callbackURL("openqueue.cloud")
                 .capacity(1000000)
                 .maxActiveUsers(1000)
@@ -45,7 +45,7 @@ class QueueServiceTest {
 
         mocQueue = Queue.builder()
                 .id("visitor")
-                .availableSecondPerUser(300)
+                .permissionExpirationSeconds(300)
                 .callbackURL("openqueue.cloud")
                 .capacity(1000000)
                 .maxActiveUsers(1000)

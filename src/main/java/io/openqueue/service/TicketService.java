@@ -9,7 +9,6 @@ import io.openqueue.dto.TicketAuthDto;
 import io.openqueue.model.Ticket;
 import io.openqueue.repo.QueueRepo;
 import io.openqueue.repo.TicketRepo;
-import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;

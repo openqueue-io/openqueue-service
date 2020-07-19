@@ -1,29 +1,27 @@
 package io.openqueue.repo;
 
+import io.openqueue.common.constant.LuaScript;
 import io.openqueue.model.Ticket;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
-import reactor.core.publisher.Flux;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import reactor.test.StepVerifier;
 
-import java.io.Serializable;
 import java.time.Instant;
-import java.util.Map;
-import java.util.Random;
-import java.util.stream.IntStream;
+import java.util.*;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static io.openqueue.common.constant.Keys.ACTIVE_SET_PREFIX;
+import static io.openqueue.common.constant.Keys.READY_SET_PREFIX;
 
 @SpringBootTest
+@Slf4j
 class TicketRepoTest {
-
-    @Autowired
-    private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
 
     @Autowired
     private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
@@ -31,122 +29,230 @@ class TicketRepoTest {
     @Autowired
     private TicketRepo ticketRepo;
 
-    @Autowired
-    private QueueRepo queueRepo;
-
     private static String testTicketId;
     private static String testQueueId;
     private static Ticket ticket;
+    private static DefaultRedisScript<Object> initQueueScript;
+    private static DefaultRedisScript<Object> flushDBScript;
 
-    @BeforeAll
-    static void runBeforeAllTestMethod() {
-        testQueueId = "q:sad1fghS";
+    static {
+        testQueueId = "q:unitest";
         testTicketId = "t:" + testQueueId + ":1";
         ticket = Ticket.builder()
                 .id(testTicketId)
-                .authCode("1asdIU2ay")
+                .authCode("password")
                 .issueTime(Instant.now().getEpochSecond())
                 .build();
+
+        initQueueScript = new DefaultRedisScript<>();
+        initQueueScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/init_queue.lua")));
+
+        flushDBScript = new DefaultRedisScript<>();
+        flushDBScript.setScriptText("redis.call('flushdb')");
     }
 
-    @AfterEach
-    void runAfterEachTestMethod() {
-        cleanup();
-    }
-
-    @Test
-    void testCreateFindAndRevokeTicket() {
-//        reactiveStringRedisTemplate.opsForHash().put(testQueueId, "id", testQueueId).block();
-//        reactiveRedisTemplate.opsForHash().put(testQueueId, "tail", 0).block();
-//        // Make sure no that ticket at first.
-//        StepVerifier.create(ticketRepo.findById(testTicketId))
-//                .expectComplete()
-//                .verify();
-//
-//        // Create a new ticket.
-//        StepVerifier.create(ticketRepo.applyOne(ticket))
-//                .expectNext(1L)
-//                .expectComplete()
-//                .verify();
-
-//        // Expect the ticket has been created.
-//        StepVerifier.create(ticketRepo.findById(testTicketId))
-//                .expectNext(ticket)
-//                .expectComplete()
-//                .verify();
-//
-//        // Delete this ticket.
-//        StepVerifier.create(ticketRepo.revoke(testTicketId))
-//                .expectNext(1L)
-//                .expectComplete()
-//                .verify();
-//
-//        // Expect this ticket has been deleted.
-//        StepVerifier.create(ticketRepo.findById(testTicketId))
-//                .expectComplete()
-//                .verify();
+    @BeforeEach
+    void prepare() {
+        // Flush redis.
+        reactiveStringRedisTemplate.execute(flushDBScript).blockFirst();
+        // Initialize a queue for testing.
+        reactiveStringRedisTemplate.execute(initQueueScript).blockFirst();
     }
 
     @Test
-    void verifyTicket() {
-//        Long result = ticketRepo.verify("set:active:q:test", "t:q:test:2", "t:q:test:2").block();
-//        System.out.println(result);
+    void testCreateTicket() {
+        // Create a new ticket.
+        List<String> keys = Collections.singletonList(testQueueId);
+        List<String> args = Arrays.asList(
+                ticket.getAuthCode(),
+                String.valueOf(ticket.getIssueTime()));
+
+        // Expect the current position is 1.
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_APPLY, keys, args))
+                .expectNext(1L)
+                .expectComplete()
+                .verify();
+
+        // Expect the ticket has been created.
+        StepVerifier.create(reactiveStringRedisTemplate.opsForHash().get(testTicketId, "id"))
+                .expectNext(testTicketId)
+                .expectComplete()
+                .verify();
+
+        // Expect the current position is 2.
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_APPLY, keys, args))
+                .expectNext(2L)
+                .expectComplete()
+                .verify();
+
+        // Expect the current position is 2.
+        keys = Collections.singletonList("wrongqueueid");
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_APPLY, keys, args))
+                .expectNext(-1L)
+                .expectComplete()
+                .verify();
     }
-
-//    @Test
-//    void testSetTicketOccupied() {
-//        // 1. Create a new ticket.
-//        // 2. Expect current ticket is not occupied.
-//        StepVerifier.create(ticketRepo.create(ticket).then(ticketRepo.findById(testTicketId)))
-//                .assertNext(ticket1 -> {
-//                    assertThat(!ticket1.isOccupied());
-//                })
-//                .expectComplete()
-//                .verify();
-//
-//        // 1. Set ticket occupied.
-//        // 2. Expect current ticket is now occupied.
-//        StepVerifier.create(ticketRepo.setOccupied(testTicketId).then(ticketRepo.findById(testTicketId)))
-//                .assertNext(ticket1 -> {
-//                    assertThat(ticket1.isOccupied());
-//                })
-//                .expectComplete()
-//                .verify();
-//    }
-
 
     @Test
-    void testRemoveTicketById() {
-//        String setKey = "set:test";
-//
-//        // 1. Add ticket to set.
-//        // 2. Make sure ticket in set at first.
-//        long currentTime = Instant.now().getEpochSecond();
-//        StepVerifier.create(ticketRepo.addToSet(setKey, testTicketId, currentTime + 10)
-//                .then(ticketRepo.isTicketInSet(setKey, testTicketId)))
-//                .expectNext(Boolean.TRUE)
-//                .expectComplete()
-//                .verify();
-//
-//        // Remove ticket by id
-//        StepVerifier.create(ticketRepo.removeOutOfSetById(setKey, testTicketId))
-//                .expectNext(1L)
-//                .expectComplete()
-//                .verify();
-//
-//        // Make sure no ticket in the set now.
-//        StepVerifier.create(ticketRepo.isTicketInSet(setKey, testTicketId))
-//                .expectNext(Boolean.FALSE)
-//                .expectComplete()
-//                .verify();
+    void testRevokeTicket() {
+        createTicket();
+
+        // Delete this ticket.
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + testQueueId;
+        String queueReadySetKey = READY_SET_PREFIX + testQueueId;
+        List<String> keys = Arrays.asList(queueActiveSetKey, queueReadySetKey);
+        List<String> args = Arrays.asList("",
+                testTicketId,
+                "wrong password");
+
+        // Expect the response code is 40101.
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_REVOKE, keys, args))
+                .expectNext(40101L)
+                .expectComplete()
+                .verify();
+
+        // Expect the response code is 200.
+        args = Arrays.asList("",
+                testTicketId,
+                ticket.getAuthCode());
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_REVOKE, keys, args))
+                .expectNext(200L)
+                .expectComplete()
+                .verify();
+
+        // Expect the ticket has been deleted.
+        StepVerifier.create(reactiveStringRedisTemplate.opsForHash().hasKey(testTicketId, "id"))
+                .expectNext(Boolean.FALSE)
+                .expectComplete()
+                .verify();
     }
 
+    @Test
+    void testActivateTicket0() {
+        createTicket();
 
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + testQueueId;
+        String queueReadySetKey = READY_SET_PREFIX + testQueueId;
+        List<String> keys = Arrays.asList(queueActiveSetKey, queueReadySetKey);
+        List<String> args = Arrays.asList("",
+                testTicketId,
+                testQueueId,
+                "wrong password");
 
-    void cleanup() {
-        reactiveRedisTemplate
-                .keys("*")
-                .flatMap(key -> reactiveRedisTemplate.delete(key))
-                .blockLast();
+        /*
+          Wrong password case.
+          Expect the response code is 40101.
+         */
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_ACTIVATE, keys, args))
+                .expectNext(40101L)
+                .expectComplete()
+                .verify();
+
+    }
+
+    @Test
+    void testActivateTicket1() {
+        createTicket();
+
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + testQueueId;
+        String queueReadySetKey = READY_SET_PREFIX + testQueueId;
+        List<String> keys = Arrays.asList(queueActiveSetKey, queueReadySetKey);
+        List<String> args = Arrays.asList("",
+                testTicketId,
+                testQueueId,
+                ticket.getAuthCode());
+        /*
+          Ticket not in the ready set, expect the response code is 41202.
+         */
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_ACTIVATE, keys, args))
+                .expectNext(41202L)
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void testActivateTicket2() {
+        createTicket();
+
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + testQueueId;
+        String queueReadySetKey = READY_SET_PREFIX + testQueueId;
+        List<String> keys = Arrays.asList(queueActiveSetKey, queueReadySetKey);
+        List<String> args = Arrays.asList("testToken",
+                testTicketId,
+                testQueueId,
+                ticket.getAuthCode());
+
+        reactiveStringRedisTemplate.opsForZSet().add(queueActiveSetKey, "testToken", 200).block();
+        /*
+          Ticket already in the active set, expect the response code is 40004.
+         */
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_ACTIVATE, keys, args))
+                .expectNext(40004L)
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void testActivateTicket3() {
+        createTicket();
+
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + testQueueId;
+        String queueReadySetKey = READY_SET_PREFIX + testQueueId;
+        List<String> keys = Arrays.asList(queueActiveSetKey, queueReadySetKey);
+        List<String> args = Arrays.asList("testToken",
+                testTicketId,
+                testQueueId,
+                ticket.getAuthCode());
+
+        reactiveStringRedisTemplate.opsForZSet().add(queueReadySetKey, testTicketId, 200).block();
+        /*
+          Ticket in the ready set, expect the response code is 200.
+         */
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_ACTIVATE, keys, args))
+                .expectNext(200L)
+                .verifyComplete();
+
+        StepVerifier.create(reactiveStringRedisTemplate.opsForZSet().score(queueActiveSetKey, "testToken"))
+                .expectNextMatches(score -> score > 0)
+                .verifyComplete();
+
+        StepVerifier.create(reactiveStringRedisTemplate.opsForZSet().score(queueReadySetKey, "testToken"))
+                .expectComplete()
+                .verify();
+
+    }
+
+    @Test
+    void testVerifyTicket () {
+        createTicket();
+
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + testQueueId;
+        List<String> keys = Collections.singletonList(queueActiveSetKey);
+        List<String> args = Arrays.asList(testTicketId, testTicketId);
+
+        // Ticket not activated, expected response code is 41201.
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_VERIFY, keys, args))
+                .expectNext(41201L)
+                .verifyComplete();
+
+        reactiveStringRedisTemplate.opsForZSet().add(queueActiveSetKey, testTicketId, 200).block();
+        // Ticket already activated, expected response code is 200.
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_VERIFY, keys, args))
+                .expectNext(200L)
+                .verifyComplete();
+
+        reactiveStringRedisTemplate.opsForHash().put(testTicketId, "occupied", "true").block();
+        // Ticket already marked as occupied, expected response code is 40901.
+        StepVerifier.create(ticketRepo.invokeLuaScript(LuaScript.TICKET_VERIFY, keys, args))
+                .expectNext(40901L)
+                .verifyComplete();
+    }
+
+    private void createTicket() {
+        DefaultRedisScript<Object> script = new DefaultRedisScript<>();
+        String scriptText = String.format("redis.call('hset', '%s', 'id', '%s', 'authCode', '%s', 'issueTime', '%d')", testTicketId, testTicketId, ticket.getAuthCode(), ticket.getIssueTime());
+        log.info(scriptText);
+        script.setScriptText(scriptText);
+        reactiveStringRedisTemplate.execute(script).blockFirst();
     }
 }

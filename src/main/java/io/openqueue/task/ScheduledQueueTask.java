@@ -51,37 +51,39 @@ public class ScheduledQueueTask {
     }
 
     private Mono<Void> doPush(Queue queue) {
-        String queueId = queue.getId();
-        Map<String, Long> cache = new HashMap<>();
-
-        // Clean expired user in active set and ready set.
-        Mono<Long> removeExpiredTicket = ticketRepo.removeOutOfSetByTime(ACTIVE_SET_PREFIX + queueId, Instant.now().getEpochSecond())
-                .then(ticketRepo.removeOutOfSetByTime(READY_SET_PREFIX + queueId, Instant.now().getEpochSecond()));
-
-        Mono<Long> countNewUser = removeExpiredTicket.then(ticketRepo.countTicketInSet(READY_SET_PREFIX + queueId))
-                .flatMap(readyUsers -> {
-                    cache.put("readyUsers", readyUsers);
-                    return ticketRepo.countTicketInSet(ACTIVE_SET_PREFIX + queueId);
-                })
-                .flatMap(activeUsers -> Mono.just(Math.min(queue.getMaxActiveUsers() - activeUsers - cache.get("readyUsers"),
-                        queue.getTail() - queue.getHead())));
-
-        // Add new users to ready set.
-        return countNewUser.flatMap(newUser -> {
-            int start = queue.getHead() + 1;
-            return Flux.fromStream(
-                    IntStream.range(start, start + newUser.intValue())
-                            .boxed()
-                            .map(index -> TICKET_PREFIX + queueId + ":" + index)
-            )
-                    .flatMap(ticket -> ticketRepo.addToSet(READY_SET_PREFIX + queueId, ticket,
-                            Instant.now().getEpochSecond() + queue.getHoldTimeForActivate()))
-                    .then(queueRepo.incHead(queueId, newUser.intValue()))
-                    .flatMap(head -> {
-                        log.info(String.format("Queue:%s | Pushed new users: %d |Current head:%d | Current tail:%d",
-                                queueId, newUser, head, queue.getTail()));
-                        return Mono.empty();
-                    });
-        });
+        return null;
     }
+//        String queueId = queue.getId();
+//        Map<String, Long> cache = new HashMap<>();
+//
+//        // Clean expired user in active set and ready set.
+//        Mono<Long> removeExpiredTicket = ticketRepo.removeOutOfSetByTime(ACTIVE_SET_PREFIX + queueId, Instant.now().getEpochSecond())
+//                .then(ticketRepo.removeOutOfSetByTime(READY_SET_PREFIX + queueId, Instant.now().getEpochSecond()));
+//
+//        Mono<Long> countNewUser = removeExpiredTicket.then(ticketRepo.countTicketInSet(READY_SET_PREFIX + queueId))
+//                .flatMap(readyUsers -> {
+//                    cache.put("readyUsers", readyUsers);
+//                    return ticketRepo.countTicketInSet(ACTIVE_SET_PREFIX + queueId);
+//                })
+//                .flatMap(activeUsers -> Mono.just(Math.min(queue.getMaxActiveUsers() - activeUsers - cache.get("readyUsers"),
+//                        queue.getTail() - queue.getHead())));
+//
+//        // Add new users to ready set.
+//        return countNewUser.flatMap(newUser -> {
+//            int start = queue.getHead() + 1;
+//            return Flux.fromStream(
+//                    IntStream.range(start, start + newUser.intValue())
+//                            .boxed()
+//                            .map(index -> TICKET_PREFIX + queueId + ":" + index)
+//            )
+//                    .flatMap(ticket -> ticketRepo.addToSet(READY_SET_PREFIX + queueId, ticket,
+//                            Instant.now().getEpochSecond() + queue.getHoldTimeForActivate()))
+//                    .then(queueRepo.incHead(queueId, newUser.intValue()))
+//                    .flatMap(head -> {
+//                        log.info(String.format("Queue:%s | Pushed new users: %d |Current head:%d | Current tail:%d",
+//                                queueId, newUser, head, queue.getTail()));
+//                        return Mono.empty();
+//                    });
+//        });
+//    }
 }

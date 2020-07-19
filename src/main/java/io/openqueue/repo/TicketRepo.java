@@ -26,6 +26,7 @@ public class TicketRepo {
 
     @PostConstruct
     public void init() {
+        redisScriptMap = new HashMap<>();
         redisScriptMap.put(LuaScript.TICKET_APPLY, loadScript("scripts/apply_ticket.lua"));
         redisScriptMap.put(LuaScript.TICKET_VERIFY, loadScript("scripts/verify_ticket.lua"));
         redisScriptMap.put(LuaScript.TICKET_ACTIVATE, loadScript("scripts/activate_ticket.lua"));

@@ -38,7 +38,7 @@ class QueueRepoTest {
         testQueueId = "q:test";
         queueTest = Queue.builder()
                 .id(testQueueId)
-                .availableSecondPerUser(300)
+                .permissionExpirationSeconds(300)
                 .callbackURL("openqueue.io")
                 .capacity(100000)
                 .maxActiveUsers(1000)
@@ -94,12 +94,12 @@ class QueueRepoTest {
     @Test
     void testUpdateQueueConfig() {
         QueueConfigDto queueConfigDto = QueueConfigDto.builder()
-                .availableSecondPerUser(100)
+                .permissionExpirationSeconds(100)
                 .name("new_name")
                 .maxActiveUsers(3000)
                 .capacity(100000)
                 .callbackURL("openqueue.io")
-                .holdTimeForActivate(200)
+                .timeoutForActivateSeconds(20)
                 .build();
 
         Queue newQueue = TypeConverter.cast(queueConfigDto, Queue.class);
@@ -115,14 +115,14 @@ class QueueRepoTest {
                             .isEqualTo(queue.getCallbackURL());
                     assertThat(queueConfigDto.getName())
                             .isEqualTo(queue.getName());
-                    assertThat(queueConfigDto.getAvailableSecondPerUser())
-                            .isEqualTo(queue.getAvailableSecondPerUser());
+                    assertThat(queueConfigDto.getPermissionExpirationSeconds())
+                            .isEqualTo(queue.getPermissionExpirationSeconds());
                     assertThat(queueConfigDto.getCapacity())
                             .isEqualTo(queue.getCapacity());
                     assertThat(queueConfigDto.getMaxActiveUsers())
                             .isEqualTo(queue.getMaxActiveUsers());
-                    assertThat(queueConfigDto.getHoldTimeForActivate())
-                            .isEqualTo(queue.getHoldTimeForActivate());
+                    assertThat(queueConfigDto.getTimeoutForActivateSeconds())
+                            .isEqualTo(queue.getTimeoutForActivateSeconds());
                 })
                 .expectComplete()
                 .verify();

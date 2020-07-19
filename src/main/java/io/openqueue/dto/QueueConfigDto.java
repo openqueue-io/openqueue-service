@@ -16,7 +16,7 @@ public class QueueConfigDto {
     private String name;
     private int capacity;
     private int maxActiveUsers;
-    private int availableSecondPerUser;
-    private int holdTimeForActivate;
+    private int permissionExpirationSeconds;
+    private int timeoutForActivateSeconds;
     private String callbackURL;
 }

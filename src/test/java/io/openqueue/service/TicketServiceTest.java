@@ -1,221 +1,208 @@
 package io.openqueue.service;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONObject;
 import io.openqueue.common.api.ResultCode;
 import io.openqueue.common.exception.TicketServiceException;
+import io.openqueue.common.util.TypeConverter;
 import io.openqueue.dto.TicketAuthDto;
 import io.openqueue.model.Queue;
 import io.openqueue.model.Ticket;
-import io.openqueue.repo.QueueRepo;
-import io.openqueue.repo.TicketRepo;
-import org.junit.jupiter.api.BeforeAll;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.http.HttpStatus;
-import reactor.core.publisher.Mono;
+import org.springframework.scripting.support.ResourceScriptSource;
 import reactor.test.StepVerifier;
+
+import java.time.Instant;
+import java.util.Map;
 
 import static io.openqueue.common.constant.Keys.ACTIVE_SET_PREFIX;
 import static io.openqueue.common.constant.Keys.READY_SET_PREFIX;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
 
 @SpringBootTest
+@Slf4j
 class TicketServiceTest {
 
     @Autowired
     private TicketService ticketService;
 
-    @MockBean
-    private QueueRepo queueRepo;
+    @Autowired
+    private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
 
-    @MockBean
-    private TicketRepo ticketRepo;
-
-    private static String testQueueId;
     private static Queue queue;
     private static Ticket ticket;
 
-    @BeforeAll
-    static void createQueue() {
-        testQueueId = "q:3nHFKa";
+    static  {
         queue = Queue.builder()
-                .availableSecondPerUser(300)
+                .permissionExpirationSeconds(300)
                 .callbackURL("xxx")
                 .capacity(10000)
                 .maxActiveUsers(500)
                 .name("test_queue")
-                .id(testQueueId)
+                .id("q:unitest")
                 .build();
+
 
         ticket = Ticket.builder()
-                .id("t:q:3nHFKa:1000")
-                .issueTime(123L)
-                .authCode("DRFGasjdm1")
+                .id("t:" + queue.getId() + ":1")
+                .authCode("password")
+                .issueTime(Instant.now().getEpochSecond())
                 .build();
 
     }
 
-//    @Test
-//    void testApplyTicket(){
-//        when(queueRepo.findById(anyString())).thenReturn(Mono.empty());
-//        when(queueRepo.incAndGetTail(anyString())).thenReturn(Mono.just(1L));
-//
-//        StepVerifier.create(ticketService.applyTicket(testQueueId))
-//                .expectErrorSatisfies(error -> {
-//                    assert error instanceof TicketServiceException;
-//                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND);
-//                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.QUEUE_NOT_EXIST_EXCEPTION);
-//                })
-//                .verify();
-//
-//        when(queueRepo.findById(anyString())).thenReturn(Mono.just(queue));
-//        when(queueRepo.incAndGetTail(anyString())).thenReturn(Mono.just(1L));
-//        when(ticketRepo.create(any(Ticket.class))).thenReturn(Mono.just(ticket));
-//
-//        StepVerifier.create(ticketService.applyTicket(testQueueId))
-//                .assertNext(responseBodyResponseEntity -> {
-//                    JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
-//                    Ticket ticket = jsonRes.getJSONObject("data").toJavaObject(Ticket.class);
-//                    assertThat(ticket.getId()).isNotNull();
-//                    assertThat(ticket.getAuthCode()).isNotNull();
-//                    assertThat(ticket.getIssueTime()).isNotNull();
-//                })
-//                .verifyComplete();
-//    }
-
-    @Test
-    void testGetTicketAuthorization(){
-        TicketAuthDto ticketAuthDto = applyTicket();
-
-        try {
-            ticketService.verifyTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e).isInstanceOf(TicketServiceException.class);
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_QUEUE_ID_EXCEPTION);
-        }
-
-        when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.FALSE));
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
-        when(ticketRepo.incUsage(anyString())).thenReturn(Mono.just(1L));
-
-        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
-                .expectErrorSatisfies(error -> {
-                    assert error instanceof TicketServiceException;
-                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.PRECONDITION_FAILED);
-                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION);
-                })
-                .verify();
-
-        when(ticketRepo.isTicketInSet(anyString(), anyString())).thenReturn(Mono.just(Boolean.TRUE));
-//        ticket.setOccupied(true);
-
-        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
-                .expectErrorSatisfies(error -> {
-                    assert error instanceof TicketServiceException;
-                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_OCCUPIED_EXCEPTION);
-                })
-                .verify();
-
-//        ticket.setOccupied(false);
-        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
-                .assertNext(responseBodyResponseEntity -> {
-                    JSONObject jsonRes = (JSONObject)JSON.toJSON(responseBodyResponseEntity.getBody());
-                    assertThat(jsonRes.getIntValue("code")).isEqualTo(ResultCode.TICKET_AUTHORIZED_SUCCESS.getCode());
-                    assertThat(jsonRes.getString("message")).isEqualTo(ResultCode.TICKET_AUTHORIZED_SUCCESS.getMessage());
-                })
-                .verifyComplete();
+    @BeforeEach
+    void prepare() {
+        // Flush redis.
+        DefaultRedisScript<Object> flushDBScript = new DefaultRedisScript<>();
+        flushDBScript.setScriptText("redis.call('flushdb')");
+        reactiveStringRedisTemplate.execute(flushDBScript).blockFirst();
     }
 
+    @Test
+    void testApplyTicket(){
+        // Queue not exist, expected throw QUEUE_NOT_EXIST_EXCEPTION
+        StepVerifier.create(ticketService.applyTicket(queue.getId()))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.QUEUE_NOT_EXIST_EXCEPTION);
+                })
+                .verify();
+
+        DefaultRedisScript<Object> initQueueScript = new DefaultRedisScript<>();
+        initQueueScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/init_queue.lua")));
+        reactiveStringRedisTemplate.execute(initQueueScript).blockFirst();
+
+        // Queue exists, expect get a ticket.
+        StepVerifier.create(ticketService.applyTicket(queue.getId()))
+                .assertNext(responseBodyResponseEntity -> {
+                    Map<String, Object> map = TypeConverter.pojo2Map(responseBodyResponseEntity.getBody());
+                    Ticket ticket = TypeConverter.cast(map.get("data"), Ticket.class);
+                            assertThat(ticket.getId()).isNotNull();
+                    assertThat(ticket.getAuthCode()).isNotNull();
+                    assertThat(ticket.getIssueTime()).isNotNull();
+                })
+                .verifyComplete();
+
+    }
 
     @Test
     void testActivateTicket(){
         TicketAuthDto ticketAuthDto = applyTicket();
 
-        // Ticket Not exist.
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.empty());
-        when(ticketRepo.isTicketInSet(startsWith(ACTIVE_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
+        // Wrong password.
+        ticketAuthDto.setAuthCode("wrongpassword");
+        StepVerifier.create(ticketService.activateTicket(ticketAuthDto))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
+                })
+                .verify();
 
-        try {
-            ticketService.activateTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e).isInstanceOf(TicketServiceException.class);
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
-        }
-
-        // Ticket's auth code is not valid.
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
-        ticketAuthDto.setAuthCode("123");
-        try {
-            ticketService.activateTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e).isInstanceOf(TicketServiceException.class);
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
-        }
-
-        // Not in activated set either ready set.
+        // Not ready for activate.
         ticketAuthDto.setAuthCode(ticket.getAuthCode());
+        StepVerifier.create(ticketService.activateTicket(ticketAuthDto))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION);
+                })
+                .verify();
 
-        when(ticketRepo.isTicketInSet(startsWith(ACTIVE_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
-        when(ticketRepo.isTicketInSet(startsWith(READY_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
+        // Already activated.
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + queue.getId();
+        reactiveStringRedisTemplate.opsForZSet().add(queueActiveSetKey, ticketAuthDto.getToken(), 200).block();
 
-        try {
-            ticketService.activateTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e).isInstanceOf(TicketServiceException.class);
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.PRECONDITION_FAILED);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.TICKET_NOT_READY_FOR_ACTIVATE_EXCEPTION);
-        }
+        StepVerifier.create(ticketService.activateTicket(ticketAuthDto))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_ALREADY_ACTIVATED_EXCEPTION);
+                })
+                .verify();
 
-        // Ticket already activated.
-        when(ticketRepo.isTicketInSet(startsWith(ACTIVE_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.TRUE));
-        when(ticketRepo.isTicketInSet(startsWith(READY_SET_PREFIX), anyString())).thenReturn(Mono.just(Boolean.FALSE));
+        String queueReadySetKey = READY_SET_PREFIX + queue.getId();
+        reactiveStringRedisTemplate.opsForZSet().delete(queueActiveSetKey).block();
+        reactiveStringRedisTemplate.opsForZSet().add(queueReadySetKey, ticketAuthDto.getTicketId(), 200).block();
+        DefaultRedisScript<Object> initQueueScript = new DefaultRedisScript<>();
+        initQueueScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/init_queue.lua")));
+        reactiveStringRedisTemplate.execute(initQueueScript).blockFirst();
 
-        try {
-            ticketService.activateTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e).isInstanceOf(TicketServiceException.class);
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.TICKET_ALREADY_ACTIVATED_EXCEPTION);
-        }
+        StepVerifier.create(ticketService.activateTicket(ticketAuthDto))
+                .assertNext(responseBodyResponseEntity -> {
+                    Map<String, Object> map = TypeConverter.pojo2Map(responseBodyResponseEntity.getBody());
+                    assertThat(map.get("code")).isEqualTo(ResultCode.ACTIVATE_TICKET_SUCCESS.getCode());
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void testVerifyTicket() {
+        TicketAuthDto ticketAuthDto = applyTicket();
+        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_NOT_ACTIVE_EXCEPTION);
+                })
+                .verify();
+
+        String queueActiveSetKey = ACTIVE_SET_PREFIX + queue.getId();
+        reactiveStringRedisTemplate.opsForZSet().add(queueActiveSetKey, ticketAuthDto.getToken(), 200).block();
+        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
+                .assertNext(responseBodyResponseEntity -> {
+                    Map<String, Object> map = TypeConverter.pojo2Map(responseBodyResponseEntity.getBody());
+                    assertThat(map.get("code")).isEqualTo(ResultCode.TICKET_AUTHORIZED_SUCCESS.getCode());
+                })
+                .verifyComplete();
+
+        reactiveStringRedisTemplate.opsForHash().put(ticket.getId(), "occupied", "true").block();
+        StepVerifier.create(ticketService.verifyTicket(ticketAuthDto))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.TICKET_OCCUPIED_EXCEPTION);
+                })
+                .verify();
     }
 
     @Test
     void testRevokeTicket(){
         TicketAuthDto ticketAuthDto = applyTicket();
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.empty());
 
-        try {
-            ticketService.revokeTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
-        }
+        // Wrong auth code
+        ticketAuthDto.setAuthCode("wrongpassword");
+        StepVerifier.create(ticketService.revokeTicket(ticketAuthDto))
+                .expectErrorSatisfies(error -> {
+                    assert error instanceof TicketServiceException;
+                    assertThat(((TicketServiceException) error).getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+                    assertThat(((TicketServiceException) error).getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
+                })
+                .verify();
 
-        ticketAuthDto.setAuthCode("123");
-        when(ticketRepo.findById(anyString())).thenReturn(Mono.just(ticket));
-        try {
-            ticketService.revokeTicket(ticketAuthDto).block();
-        } catch (TicketServiceException e) {
-            assertThat(e.getHttpStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
-            assertThat(e.getResultCode()).isEqualTo(ResultCode.MISMATCH_TICKET_AUTH_CODE_EXCEPTION);
-        }
+        ticketAuthDto.setAuthCode(ticket.getAuthCode());
+        StepVerifier.create(ticketService.revokeTicket(ticketAuthDto))
+                .assertNext(responseBodyResponseEntity -> {
+                    Map<String, Object> map = TypeConverter.pojo2Map(responseBodyResponseEntity.getBody());
+                    assertThat(map.get("code")).isEqualTo(ResultCode.REVOKE_TICKET_SUCCESS.getCode());
+                })
+                .verifyComplete();
     }
 
     private TicketAuthDto applyTicket() {
+        DefaultRedisScript<Object> script = new DefaultRedisScript<>();
+        String scriptText = String.format("redis.call('hset', '%s', 'id', '%s', 'authCode', '%s', 'issueTime', '%d')", ticket.getId(), ticket.getId(), ticket.getAuthCode(), ticket.getIssueTime());
+        log.info(scriptText);
+        script.setScriptText(scriptText);
+        reactiveStringRedisTemplate.execute(script).blockFirst();
 
         return TicketAuthDto.builder()
                 .token(ticket.getId() + ":" + ticket.getAuthCode())
-                .queueId("q:" + ticket.getId().split(":")[2])
-                .position(Integer.parseInt(ticket.getId().split(":")[3]))
+                .queueId(queue.getId())
+                .position(1)
                 .ticketId(ticket.getId())
                 .authCode(ticket.getAuthCode())
                 .build();
