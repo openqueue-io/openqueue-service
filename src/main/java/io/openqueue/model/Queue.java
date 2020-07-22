@@ -16,8 +16,10 @@ public class Queue {
     private String id;
     private String name;
     private int capacity;
-    private int head;
-    private int tail;
+    @Builder.Default
+    private int head = 0;
+    @Builder.Default
+    private int tail = 0;
     private int maxActiveUsers;
     private int permissionExpirationSeconds;
     private int timeoutForActivateSeconds;

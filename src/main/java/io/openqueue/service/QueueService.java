@@ -39,7 +39,7 @@ public class QueueService {
                 .flatMap(qid -> {
                     queue.setId(qid);
                     queueSetupDto.setQueueId(qid);
-                    queueSetupDto.setQueueUrl("webapp.openqueue.cloud/q/" + qid.split(":")[1]);
+                    queueSetupDto.setQueueUrl("portal.openqueue.cloud/q/" + qid.split(":")[1]);
                     return queueRepo.createOrUpdate(queue);
                 })
                 .flatMap(newQueue -> queueRepo.addToSet(newQueue.getId()))

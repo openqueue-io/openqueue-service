@@ -87,6 +87,11 @@ public enum ResultCode {
     TICKET_ALREADY_ACTIVATED_EXCEPTION(40004, "Ticket already activated."),
 
     /**
+     * Exception when close queue.
+     */
+    SETUP_QUEUE_Validation_FAILED(40005, "Setup queue failed due to invalid parameters."),
+
+    /**
      * Mismatch ticket auth code
      */
     MISMATCH_TICKET_AUTH_CODE_EXCEPTION(40101, "Mismatch ticket auth code."),
