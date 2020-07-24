@@ -8,5 +8,6 @@ public interface Keys {
     String READY_SET_PREFIX = "set:ready:";
     String ALL_QUEUES_SET = "queues";
     String TICKET_PREFIX = "t:";
+    String QUEUE_PREFIX = "q:";
     String LOCK_PREFIX = "lock:";
 }

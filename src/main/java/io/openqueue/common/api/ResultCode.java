@@ -67,6 +67,10 @@ public enum ResultCode {
     APPLY_TICKET_SUCCESS(20101, "Apply ticket success!"),
 
     /**
+     * Invalid request parameter
+     */
+    GENERAL_ARGUMENT_VALIDATION_ERROR(40000, "Invalid request parameter"),
+    /**
      * Illegal ticket auth code format
      */
     ILLEGAL_TICKET_AUTH_FORMAT_EXCEPTION(40001, "Illegal ticket auth code format."),

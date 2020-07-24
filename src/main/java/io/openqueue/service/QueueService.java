@@ -2,6 +2,7 @@ package io.openqueue.service;
 
 import io.openqueue.common.api.ResponseBody;
 import io.openqueue.common.api.ResultCode;
+import io.openqueue.common.constant.Keys;
 import io.openqueue.common.util.RandomCodeGenerator;
 import io.openqueue.common.util.TypeConverter;
 import io.openqueue.dto.QueueConfigDto;
@@ -37,9 +38,9 @@ public class QueueService {
 
         return getQueueId()
                 .flatMap(qid -> {
-                    queue.setId(qid);
+                    queue.setId(Keys.QUEUE_PREFIX + qid);
                     queueSetupDto.setQueueId(qid);
-                    queueSetupDto.setQueueUrl("portal.openqueue.cloud/q/" + qid.split(":")[1]);
+                    queueSetupDto.setQueueUrl("portal.openqueue.cloud/q/" + qid);
                     return queueRepo.createOrUpdate(queue);
                 })
                 .flatMap(newQueue -> queueRepo.addToSet(newQueue.getId()))
@@ -48,7 +49,7 @@ public class QueueService {
     }
 
     private Mono<String> getQueueId() {
-        String qid = RandomCodeGenerator.getQueueId();
+        String qid = RandomCodeGenerator.getCode();
 
         return queueRepo.findAllId()
                 .reduce(new HashSet<String>(), (set, id) -> {
@@ -57,7 +58,7 @@ public class QueueService {
                 })
                 .defaultIfEmpty(new HashSet<>())
                 .flatMap(allQueues -> {
-                    if (allQueues.contains(qid)) {
+                    if (allQueues.contains(Keys.QUEUE_PREFIX + qid)) {
                         return getQueueId();
                     }
                     return Mono.just(qid);
@@ -65,7 +66,7 @@ public class QueueService {
     }
 
     public Mono<ResponseEntity<ResponseBody>> getQueueStatus(String queueId) {
-        return queueRepo.findById(queueId)
+        return queueRepo.findById(Keys.QUEUE_PREFIX + queueId)
                 .flatMap(queue -> {
                     QueueStatusDto queueStatusDto = QueueStatusDto.builder()
                             .head(queue.getHead())
@@ -79,7 +80,7 @@ public class QueueService {
     }
 
     public Mono<ResponseEntity<ResponseBody>> getQueueConfig(String queueId) {
-        return queueRepo.findById(queueId)
+        return queueRepo.findById(Keys.QUEUE_PREFIX + queueId)
                 .flatMap(queue -> {
                     QueueConfigDto queueConfigDto = TypeConverter.cast(queue, QueueConfigDto.class);
                     ResponseBody responseBody = new ResponseBody(ResultCode.GET_QUEUE_CONFIG_SUCCESS, queueConfigDto);
@@ -90,7 +91,7 @@ public class QueueService {
     }
 
     public Mono<ResponseEntity<ResponseBody>> updateQueueConfig(String queueId, QueueConfigDto queueConfigDto) {
-        return queueRepo.findById(queueId)
+        return queueRepo.findById(Keys.QUEUE_PREFIX + queueId)
                 .flatMap(queue -> {
                     Queue newQueue = TypeConverter.cast(queueConfigDto, Queue.class);
                     newQueue.setId(queue.getId());
@@ -102,7 +103,7 @@ public class QueueService {
     }
 
     public Mono<ResponseEntity<ResponseBody>> closeQueue(String queueId) {
-        return queueRepo.findById(queueId)
+        return queueRepo.findById(Keys.QUEUE_PREFIX + queueId)
                 .flatMap(queue -> queueRepo.close(queue.getId()))
                 .flatMap(success -> {
                     if (success) {

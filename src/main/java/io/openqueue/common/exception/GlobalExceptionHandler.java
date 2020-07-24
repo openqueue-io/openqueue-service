@@ -32,7 +32,16 @@ public class GlobalExceptionHandler {
     public Mono<ResponseEntity<ResponseBody>> handleBindException(WebExchangeBindException exception) {
         Map<String, List<String>> body = new HashMap<>();
         body.put("errors", exception.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.toList()));
-        ResponseBody responseBody = new ResponseBody(ResultCode.SETUP_QUEUE_Validation_FAILED, body);
+        String errorMethod = exception.getMethodParameter().getMethod().getName();
+        ResultCode resultCode = null;
+        switch (errorMethod) {
+            case "setupQueue":
+                resultCode = ResultCode.SETUP_QUEUE_Validation_FAILED;
+                break;
+            default:
+                resultCode = ResultCode.GENERAL_ARGUMENT_VALIDATION_ERROR;
+        }
+        ResponseBody responseBody = new ResponseBody(resultCode, body);
 
         return Mono.just(ResponseEntity.badRequest().body(responseBody));
     }
@@ -43,7 +52,7 @@ public class GlobalExceptionHandler {
         Map<String, String> body = new HashMap<>();
         body.put("error", exception.getReason());
 
-        ResponseBody responseBody = new ResponseBody(ResultCode.SETUP_QUEUE_Validation_FAILED, body);
+        ResponseBody responseBody = new ResponseBody(ResultCode.GENERAL_ARGUMENT_VALIDATION_ERROR, body);
 
         return Mono.just(ResponseEntity.badRequest().body(responseBody));
     }
