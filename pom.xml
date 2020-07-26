@@ -51,11 +51,16 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- fastjson -->
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>fastjson</artifactId>
 			<version>1.2.62</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-util</artifactId>
+			<version>11.0.0.beta1</version>
 		</dependency>
 
 		<dependency>
