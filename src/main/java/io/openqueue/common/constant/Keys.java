@@ -9,5 +9,5 @@ public interface Keys {
     String ALL_QUEUES_SET = "queues";
     String TICKET_PREFIX = "t:";
     String QUEUE_PREFIX = "q:";
-    String LOCK_PREFIX = "lock:";
+    String REFRESH_QUEUE_LOCK = "lock:refresh_queue";
 }

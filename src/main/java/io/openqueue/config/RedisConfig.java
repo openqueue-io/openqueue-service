@@ -1,6 +1,5 @@
 package io.openqueue.config;
 
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
@@ -15,15 +14,16 @@ import java.io.Serializable;
  * @author chenjing
  */
 @Configuration
-@AutoConfigureAfter(RedisConfig.class)
 public class RedisConfig {
 
     @Bean
     public ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate(LettuceConnectionFactory redisConnectionFactory) {
 
+        StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
+
         RedisSerializationContext<String, Serializable> serializationContext = RedisSerializationContext
-                .<String, Serializable>newSerializationContext(new StringRedisSerializer())
-                .hashKey(new StringRedisSerializer())
+                .<String, Serializable>newSerializationContext(stringRedisSerializer)
+                .hashKey(stringRedisSerializer)
                 .hashValue(new GenericJackson2JsonRedisSerializer())
                 .build();
 

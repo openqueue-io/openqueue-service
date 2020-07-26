@@ -18,6 +18,7 @@ import java.io.Serializable;
 import java.util.stream.IntStream;
 
 import static io.openqueue.common.constant.Keys.ALL_QUEUES_SET;
+import static io.openqueue.common.constant.Keys.REFRESH_QUEUE_LOCK;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 @SpringBootTest
@@ -167,12 +168,12 @@ class QueueRepoTest {
 
     @Test
     void testGetQueueLock() {
-        StepVerifier.create(queueRepo.getQueueLock(testQueueId, 5))
+        StepVerifier.create(queueRepo.getRefreshQueueLock(REFRESH_QUEUE_LOCK, 5))
                 .expectNext(Boolean.TRUE)
                 .expectComplete()
                 .verify();
 
-        StepVerifier.create(queueRepo.getQueueLock(testQueueId, 5))
+        StepVerifier.create(queueRepo.getRefreshQueueLock(REFRESH_QUEUE_LOCK, 5))
                 .expectNext(Boolean.FALSE)
                 .expectComplete()
                 .verify();
@@ -183,7 +184,7 @@ class QueueRepoTest {
             e.printStackTrace();
         }
 
-        StepVerifier.create(queueRepo.getQueueLock(testQueueId, 5))
+        StepVerifier.create(queueRepo.getRefreshQueueLock(REFRESH_QUEUE_LOCK, 5))
                 .expectNext(Boolean.TRUE)
                 .expectComplete()
                 .verify();

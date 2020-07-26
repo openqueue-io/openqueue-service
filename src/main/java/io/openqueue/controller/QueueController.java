@@ -1,19 +1,14 @@
 package io.openqueue.controller;
 
-import com.alibaba.fastjson.JSONObject;
 import io.openqueue.common.api.ResponseBody;
 import io.openqueue.common.validation.SetupQueue;
 import io.openqueue.dto.QueueConfigDto;
 import io.openqueue.service.QueueService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-
-import javax.validation.constraints.NotNull;
 
 /**
  * @author chenjing

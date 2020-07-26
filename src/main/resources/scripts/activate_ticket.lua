@@ -10,31 +10,26 @@ local ticketToken = ARGV[1]
 local ticketId = ARGV[2]
 local queueId = ARGV[3]
 local ticketAuthCode = ARGV[4]
-
-local response = {}
+local current_time = tonumber(ARGV[5])
 
 local realAuthCode = redis.call("hget", ticketId, "authCode")
 if ticketAuthCode ~= realAuthCode then
-    response[1] = 40101
-    return response
+    return 40101
 end
 
 local isTicketActivated = redis.call("zscore", activeSetKey, ticketToken)
 if isTicketActivated then
-    response[1] = 40004
-    return response
+    return 40004
 end
 
 local isReadyToActivate = redis.call("zscore", readySetKey, ticketId)
 if not isReadyToActivate then
-    response[1] = 41202
-    return response
+    return 41202
 end
 
 local expireTime = redis.call("hget", queueId, "permissionExpirationSeconds")
 
-redis.call("zadd", activeSetKey, expireTime, ticketToken)
+redis.call("zadd", activeSetKey, current_time + expireTime, ticketToken)
 redis.call("zrem", readySetKey, ticketId)
 
-response[1] = 200
-return response
+return 200

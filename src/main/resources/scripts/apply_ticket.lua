@@ -22,7 +22,4 @@ local ticketId = "t:" .. qid .. ":" .. position
 
 redis.call("hmset", ticketId , "id", ticketId, "authCode", authCode, "issueTime", issueTime)
 
-local response = {}
-response[1] = position
-
-return response
+return position

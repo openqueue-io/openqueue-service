@@ -51,8 +51,8 @@ public class QueueRepo {
         return reactiveRedisTemplate.opsForSet().members(ALL_QUEUES_SET).cast(String.class);
     }
 
-    public Mono<Boolean> getQueueLock(String queueId, int timeout) {
-        return reactiveRedisTemplate.opsForValue().setIfAbsent(LOCK_PREFIX + queueId, "Locked", Duration.ofSeconds(timeout));
+    public Mono<Boolean> getRefreshQueueLock(String lock, int timeout) {
+        return reactiveRedisTemplate.opsForValue().setIfAbsent(lock, "Locked", Duration.ofSeconds(timeout));
     }
 
     public Mono<Long> incAndGetTail(String queueId) {

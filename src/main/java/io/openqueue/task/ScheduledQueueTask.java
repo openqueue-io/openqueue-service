@@ -1,19 +1,23 @@
 package io.openqueue.task;
 
 import io.openqueue.model.Queue;
+import io.openqueue.model.WebSocketSender;
 import io.openqueue.repo.QueueRepo;
-import io.openqueue.repo.TicketRepo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import javax.annotation.PostConstruct;
+import java.io.Serializable;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.IntStream;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static io.openqueue.common.constant.Keys.*;
 
@@ -27,63 +31,63 @@ public class ScheduledQueueTask {
     private QueueRepo queueRepo;
 
     @Autowired
-    private TicketRepo ticketRepo;
+    private ReactiveRedisTemplate<String, Serializable> reactiveRedisTemplate;
+
+    @Autowired
+    public ConcurrentHashMap<String, Set<WebSocketSender>> queueSubscriber;
+
+    private DefaultRedisScript<Object> refreshQueueScript;
+
+    @PostConstruct
+    public void init() {
+        refreshQueueScript = new DefaultRedisScript<>();
+        refreshQueueScript.setScriptSource(new ResourceScriptSource(new ClassPathResource("scripts/refresh_all_queues.lua")));
+    }
 
     private static final int LOCK_TIME_FOR_EACH_QUEUE = 3;
 
-//    @Scheduled(fixedRate = 5000)
-    public void pushAllQueuesForward() {
+    @Scheduled(fixedRate = 5000)
+    private void refreshQueue() {
+        log.info("Refresh queues...");
+        List<String> keys = Collections.emptyList();
+        List<String> args = Collections.singletonList(String.valueOf(Instant.now().getEpochSecond()));
+
+        queueRepo.getRefreshQueueLock(REFRESH_QUEUE_LOCK, LOCK_TIME_FOR_EACH_QUEUE)
+            .flatMap(success -> {
+                if (success) {
+                    return reactiveRedisTemplate
+                            .execute(refreshQueueScript, keys, args)
+                            .then();
+                }
+                return Mono.empty();
+            })
+        .block();
+    }
+
+    @Scheduled(fixedRate = 6000)
+    private void updateQueueStatus() {
+        Map<String, Queue> queues = new HashMap<>();
+
         queueRepo.findAllId()
-                .flatMap(this::pushQueueForward)
-                .subscribe();
-        log.info("=======================checking queues and pushing them forward==========================");
-    }
+                .flatMap(queueId -> queueRepo.findById(queueId))
+                .flatMap(queue -> {
+                    queues.put(queue.getId(), queue);
 
-    private Mono<Void> pushQueueForward(String queueId) {
-        return queueRepo.getQueueLock(queueId, LOCK_TIME_FOR_EACH_QUEUE)
-                .flatMap(success -> {
-                    if (success) {
-                        return queueRepo.findById(queueId).flatMap(this::doPush);
+                    Set<WebSocketSender> subscribers = queueSubscriber.get(queue.getId());
+                    if (subscribers == null) {
+                        subscribers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+                        queueSubscriber.put(queue.getId(), subscribers);
                     }
+                    log.info("queue id:" + queue.getId() + ", head:" + queue.getHead() + ", tail:" + queue.getTail());
                     return Mono.empty();
-                });
+                })
+                .blockLast();
 
+        queueSubscriber.forEach((queueId, subscribers) -> {
+            Queue queue = queues.get(queueId);
+            subscribers.stream().parallel()
+                    .forEach(webSocketSender ->
+                            webSocketSender.send(String.format("{head: %d, tail: %d}", queue.getHead(), queue.getTail())));
+        });
     }
-
-    private Mono<Void> doPush(Queue queue) {
-        return null;
-    }
-//        String queueId = queue.getId();
-//        Map<String, Long> cache = new HashMap<>();
-//
-//        // Clean expired user in active set and ready set.
-//        Mono<Long> removeExpiredTicket = ticketRepo.removeOutOfSetByTime(ACTIVE_SET_PREFIX + queueId, Instant.now().getEpochSecond())
-//                .then(ticketRepo.removeOutOfSetByTime(READY_SET_PREFIX + queueId, Instant.now().getEpochSecond()));
-//
-//        Mono<Long> countNewUser = removeExpiredTicket.then(ticketRepo.countTicketInSet(READY_SET_PREFIX + queueId))
-//                .flatMap(readyUsers -> {
-//                    cache.put("readyUsers", readyUsers);
-//                    return ticketRepo.countTicketInSet(ACTIVE_SET_PREFIX + queueId);
-//                })
-//                .flatMap(activeUsers -> Mono.just(Math.min(queue.getMaxActiveUsers() - activeUsers - cache.get("readyUsers"),
-//                        queue.getTail() - queue.getHead())));
-//
-//        // Add new users to ready set.
-//        return countNewUser.flatMap(newUser -> {
-//            int start = queue.getHead() + 1;
-//            return Flux.fromStream(
-//                    IntStream.range(start, start + newUser.intValue())
-//                            .boxed()
-//                            .map(index -> TICKET_PREFIX + queueId + ":" + index)
-//            )
-//                    .flatMap(ticket -> ticketRepo.addToSet(READY_SET_PREFIX + queueId, ticket,
-//                            Instant.now().getEpochSecond() + queue.getHoldTimeForActivate()))
-//                    .then(queueRepo.incHead(queueId, newUser.intValue()))
-//                    .flatMap(head -> {
-//                        log.info(String.format("Queue:%s | Pushed new users: %d |Current head:%d | Current tail:%d",
-//                                queueId, newUser, head, queue.getTail()));
-//                        return Mono.empty();
-//                    });
-//        });
-//    }
 }

@@ -90,7 +90,8 @@ public class TicketService {
         List<String> args = Arrays.asList(ticketAuthDto.getToken(),
                 ticketAuthDto.getTicketId(),
                 ticketAuthDto.getQueueId(),
-                ticketAuthDto.getAuthCode());
+                ticketAuthDto.getAuthCode(),
+                String.valueOf(Instant.now().getEpochSecond()));
 
         return ticketRepo
                 .invokeLuaScript(LuaScript.TICKET_ACTIVATE, keys, args)
