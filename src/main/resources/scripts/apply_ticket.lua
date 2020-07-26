@@ -12,7 +12,7 @@ local issueTime = ARGV[2]
 local res = redis.call("hget", qid , "id")
 
 -- if queue not exist
-if res ~= qid then
+if not res or string.gsub(res, '"', '') ~= qid then
     return -1
 end
 
